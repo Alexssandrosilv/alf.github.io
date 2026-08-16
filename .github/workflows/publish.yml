@@ -1,0 +1,304 @@
+# # on:
+# #   workflow_dispatch:
+# #   push:
+# #     branches: main
+# # 
+# # name: Quarto Publish
+# # 
+# # jobs:
+# #   build-deploy:
+# #     runs-on: ubuntu-latest
+# #     permissions:
+# #       contents: write
+# #     steps:
+# #       - name: Check out repository
+# #         uses: actions/checkout@v4
+# # 
+# #       - name: Set up Quarto
+# #         uses: quarto-dev/quarto-actions/setup@v2
+# # 
+# #       - name: Install R
+# #         uses: r-lib/actions/setup-r@v2
+# #         with:
+# #           r-version: '4.2.0'
+# # 
+# #       - name: Install R Dependencies
+# #         uses: r-lib/actions/setup-renv@v2
+# #         with:
+# #           cache-version: 1
+# # 
+# #       - name: Render and Publish
+# #         uses: quarto-dev/quarto-actions/publish@v2
+# #         with:
+# #           target: gh-pages
+# #         env:
+# #           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           
+#           
+# # on:
+# #   workflow_dispatch:
+# #   push:
+# #     branches: main
+# # 
+# # name: Quarto Publish
+# # 
+# # jobs:
+# #   build-deploy:
+# #     runs-on: ubuntu-latest
+# #     permissions:
+# #       contents: write
+# #     steps:
+# #       - name: Check out repository
+# #         uses: actions/checkout@v4
+# # 
+# #       - name: Install System Dependencies
+# #         run: |
+# #           sudo apt-get update
+# #           sudo apt-get install -y pandoc
+# # 
+# #       - name: Instalar dependências de sistema para compilar pacotes R
+# #         run: |
+# #           sudo apt-get update
+# #           sudo apt-get install -y build-essential libssl-dev libcurl4-openssl-dev libxml2-dev libgit2-dev
+# # 
+# #       - name: Set up Quarto
+# #         uses: quarto-dev/quarto-actions/setup@v2
+# # 
+# #       - name: Install R
+# #         uses: r-lib/actions/setup-r@v2
+# #         with:
+# #           r-version: '4.2.0'
+# # 
+# #       - name: Install R Dependencies
+# #         run: |
+# #           Rscript -e "if (!requireNamespace('renv', quietly = TRUE)) install.packages('renv')"
+# #           Rscript -e "renv::restore(prompt = FALSE)"
+# # 
+# #       - name: Render and Publish
+# #         uses: quarto-dev/quarto-actions/publish@v2
+# #         with:
+# #           target: gh-pages
+# #         env:
+# #           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# #           
+# #           
+#           
+#           
+# # on:
+# #   push:
+# #     branches: main
+# # 
+# # name: Quarto Publish
+# # 
+# # jobs:
+# #   build-deploy:
+# #     runs-on: ubuntu-latest
+# #     permissions:
+# #       contents: write
+# #       pages: write      # Permissão necessária para deploy
+# #       id-token: write   # Permissão necessária para deploy
+# # 
+# #     steps:
+# #       - name: Check out repository
+# #         uses: actions/checkout@v4
+# # 
+# #       - name: Set up Quarto
+# #         uses: quarto-dev/quarto-actions/setup@v2
+# # 
+# #       - name: Install R
+# #         uses: r-lib/actions/setup-r@v2
+# #         with:
+# #           r-version: '4.3.3' # Ou a versão que você usa
+# # 
+# #       - name: Install R Packages
+# #         uses: r-lib/actions/setup-r-dependencies@v2
+# #         with:
+# #           packages:
+# #             any::knitr
+# #             any::rmarkdown
+# #             any::gsheet
+# #             any::corrplot
+# #             any::tidyverse
+# #             any::nlme
+# #             any::reactable
+# #             any::DT
+# #             any::htmltools
+# #             any::geomtextpath
+# #             any::viridis
+# #             any::ggrepel
+# #             any::reticulate
+# #             # Adicione aqui outros pacotes que seu site usa
+# # 
+# #       - name: Render and Publish
+# #         uses: quarto-dev/quarto-actions/publish@v2
+# #         with:
+# #           target: gh-pages
+# #         env:
+# #           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# # 
+# 
+# on:
+#   push:
+#     branches: main
+# 
+# name: Quarto Publish
+# 
+# jobs:
+#   build-deploy:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#       pages: write
+#       id-token: write
+# 
+#     steps:
+#       - name: Check out repository
+#         uses: actions/checkout@v4
+# 
+#       # --- 1. CONFIGURAÇÃO DO PYTHON (NOVO) ---
+#       # Isso aqui é o que faltava para o erro "Quitting" sumir.
+#       # O Quarto precisa do Jupyter instalado para rodar blocos de Python.
+#       - name: Install Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.10'
+#           # cache: 'pip' 
+# 
+#       - name: Install Jupyter and Pandas
+#         run: pip install jupyter pandas matplotlib
+# 
+#       # --- 2. CONFIGURAÇÃO DO QUARTO ---
+#       - name: Set up Quarto
+#         uses: quarto-dev/quarto-actions/setup@v2
+# 
+#       # --- 3. CONFIGURAÇÃO DO R ---
+#       - name: Install R
+#         uses: r-lib/actions/setup-r@v2
+#         with:
+#           r-version: '4.3.3'
+# 
+#       # --- 4. PACOTES DO R ---
+#       - name: Install R Packages
+#         uses: r-lib/actions/setup-r-dependencies@v2
+#         with:
+#           packages:
+#             any::knitr
+#             any::rmarkdown
+#             any::gsheet
+#             any::corrplot
+#             any::tidyverse
+#             any::nlme
+#             any::reactable
+#             any::DT
+#             any::htmltools
+#             any::geomtextpath
+#             any::viridis
+#             any::ggrepel
+#             any::reticulate  # O tradutor R-Python
+# 
+#       # --- 5. PUBLICAR ---
+#       - name: Render and Publish
+#         uses: quarto-dev/quarto-actions/publish@v2
+#         with:
+#           target: gh-pages
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+name: Quarto Publish
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Resolve o aviso de depreciação do Node.js
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # --- 1. DEPENDÊNCIAS DE SISTEMA (Crucial para pacotes de R) ---
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            pandoc
+
+      # --- 2. CONFIGURAÇÃO DO PYTHON (Para Selenium e Reticulate) ---
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Jupyter and Automation Tools
+        run: pip install jupyter pandas matplotlib selenium
+
+      # --- 3. CONFIGURAÇÃO DO QUARTO ---
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      # # --- 4. CONFIGURAÇÃO DO R ---
+      # - name: Install R
+      #   uses: r-lib/actions/setup-r@v2
+      #   with:
+      #     r-version: '4.3.3'
+      #     use-public-rspm: true # Acelera a instalação baixando binários prontos
+
+      # --- 3. CONFIGURAÇÃO DO R ---
+      - name: Install R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'latest' # Vamos para a versão mais atual estável
+
+      # --- 4. INSTALAÇÃO DOS PACOTES R ---
+      - name: Install R Packages
+        run: |
+          install.packages(c("remotes", "renv"))
+          # Forçamos a instalação ignorando o lockfile problemático
+          remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", "tidyverse", "nlme", "reactable", "DT", "htmltools", "geomtextpath", "viridis", "reticulate"))
+        shell: Rscript {0}
+        
+      # # --- 5. INSTALAÇÃO DOS PACOTES R (Níveis de Fator: TCC e Projetos) ---
+      # - name: Install R Packages
+      #   uses: r-lib/actions/setup-r-dependencies@v2
+      #   with:
+      #     packages: |
+      #       any::knitr
+      #       any::rmarkdown
+      #       any::gsheet
+      #       any::corrplot
+      #       any::tidyverse
+      #       any::nlme
+      #       any::reactable
+      #       any::DT
+      #       any::htmltools
+      #       any::geomtextpath
+      #       any::viridis
+      #       any::ggrepel
+      #       any::reticulate
+
+      # --- 6. RENDERIZAÇÃO E DEPLOY ---
+      - name: Render and Publish
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target: gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
