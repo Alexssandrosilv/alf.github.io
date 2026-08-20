@@ -177,9 +177,104 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This is a Quarto website.</p>
 <p>To learn more about Quarto websites visit <a href="https://quarto.org/docs/websites" class="uri">https://quarto.org/docs/websites</a>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># PROJETO: ALF - Sistema Integrado de Gestão e Engenharia de Dados</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># MÓDULO: Camada Bronze (Ingestão de Dados Brutos via API Google Sheets)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># AUTORES / GESTORES: Alexssandro Silva e Leticia Haifa</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 1. CARREGAMENTO DE BIBLIOTECAS E DEPENDÊNCIAS DO AMBIENTE ---</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Nota técnica: Utiliza-se a chamada explícita para assegurar o isolamento </span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># de namespace, prevenir conflitos de funções e garantir a reprodutibilidade.</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(googlesheets4) <span class="co"># Conectividade segura e consumo de dados via API Google Sheets</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)       <span class="co"># Manipulação e transformação estrutural de data frames</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 2. CONFIGURAÇÃO DE AUTENTICAÇÃO SEGURA (COMPATIBILIDADE HÍBRIDA) ---</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Contexto: Este bloco verifica dinamicamente o ambiente de execução.</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># - Em Produção (GitHub Actions): Resgata o segredo criptografado e gera o arquivo temporário.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># - Em Desenvolvimento (Local): Resgata o caminho do arquivo de credenciais via .Renviron.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (base<span class="sc">::</span><span class="fu">nzchar</span>(base<span class="sc">::</span><span class="fu">Sys.getenv</span>(<span class="st">"GCP_CREDENTIALS_JSON"</span>))) {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ambiente de Nuvem (CI/CD): Escrita segura do token a partir do cofre de segredos</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  base<span class="sc">::</span><span class="fu">writeLines</span>(base<span class="sc">::</span><span class="fu">Sys.getenv</span>(<span class="st">"GCP_CREDENTIALS_JSON"</span>), <span class="st">"credentials_temp.json"</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  googlesheets4<span class="sc">::</span><span class="fu">gs4_auth</span>(<span class="at">path =</span> <span class="st">"credentials_temp.json"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ambiente Local (RStudio): Utilização da variável de ambiente local blindada</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  googlesheets4<span class="sc">::</span><span class="fu">gs4_auth</span>(<span class="at">path =</span> base<span class="sc">::</span><span class="fu">Sys.getenv</span>(<span class="st">"GCP_CREDENTIALS"</span>))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 3. REFERÊNCIA CENTRALIZADA DA FONTE DE DADOS ---</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co"># URI de apontamento para a planilha mestre de controle financeiro do ecossistema ALF</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>url_mestre <span class="ot">&lt;-</span> <span class="st">"https://docs.google.com/spreadsheets/d/1f-IJQ21PyW9WoN1g8RPzJVK3K-weap2R4GJ_J8f2oGM/edit"</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 4. INGESTÃO DOS DADOS BRUTOS (CAMADA BRONZE) ---</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Extração modular de dados tabulares diretamente da origem, mantendo a </span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># integridade crua ("as-is") para posterior refinamento na Camada Prata.</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>entradas_bruto      <span class="ot">&lt;-</span> googlesheets4<span class="sc">::</span><span class="fu">read_sheet</span>(url_mestre, <span class="at">sheet =</span> <span class="st">"entradas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Reading from "dados".</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Range ''entradas''.</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>poupanca_bruto      <span class="ot">&lt;-</span> googlesheets4<span class="sc">::</span><span class="fu">read_sheet</span>(url_mestre, <span class="at">sheet =</span> <span class="st">"poupanca"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Reading from "dados".</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Range ''poupanca''.</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>saidas_bruto        <span class="ot">&lt;-</span> googlesheets4<span class="sc">::</span><span class="fu">read_sheet</span>(url_mestre, <span class="at">sheet =</span> <span class="st">"saidas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Reading from "dados".</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Range ''saidas''.</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>lista_desejos_bruto <span class="ot">&lt;-</span> googlesheets4<span class="sc">::</span><span class="fu">read_sheet</span>(url_mestre, <span class="at">sheet =</span> <span class="st">"lista_desejos"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Reading from "dados".</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ Range ''lista_desejos''.</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- 5. VALIDAÇÃO E LOG DE EXECUÇÃO ---</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Auditoria visual inicial para certificar a integridade do carregamento estrutural</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>base<span class="sc">::</span><span class="fu">print</span>(<span class="st">"[LOG] Ingestão da Camada Bronze concluída com sucesso."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
+<pre><code>[1] "[LOG] Ingestão da Camada Bronze concluída com sucesso."</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>base<span class="sc">::</span><span class="fu">print</span>(base<span class="sc">::</span><span class="fu">paste</span>(<span class="st">"Total de registros brutos em 'entradas':"</span>, base<span class="sc">::</span><span class="fu">nrow</span>(entradas_bruto)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Total de registros brutos em 'entradas': 4"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(entradas_bruto)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 6
+  data                valor fonte_renda frequencia_recebimento descricao
+  &lt;dttm&gt;              &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;                  &lt;chr&gt;    
+1 2026-08-16 00:00:00  1500 salário     fixas                  MPAM     
+2 2026-08-16 00:00:00  2000 salário     fixas                  AG       
+3 2026-08-16 00:00:00   300 assessoria  variáveis              Leonardo 
+4 2026-08-16 00:00:00    NA &lt;NA&gt;        &lt;NA&gt;                   &lt;NA&gt;     
+# ℹ 1 more variable: usuario_id &lt;chr&gt;</code></pre>
 </div>
 </div>
 
