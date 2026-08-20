@@ -278,13 +278,23 @@ jobs:
       #     "htmltools", "geomtextpath", "viridis", "reticulate"))
       #   shell: Rscript {0}
         
-        # --- 4. INSTALAÇÃO DOS PACOTES R ---
-      - name: Install R Packages
+      #   # --- 4. INSTALAÇÃO DOS PACOTES R ---
+      # - name: Install R Packages
+      #   run: |
+      #     install.packages(c("remotes", "renv"))
+      #     remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", 
+      #     "tidyverse", "nlme", "reactable", "DT", "htmltools", 
+      #     "geomtextpath", "viridis", "reticulate", "googlesheets4"))
+      #   shell: Rscript {0}
+      #   
+        # --- 4. INSTALAÇÃO DE PACOTES R VIA RENV ---
+      - name: Install R Packages with renv
         run: |
-          install.packages(c("remotes", "renv"))
-          remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", 
-          "tidyverse", "nlme", "reactable", "DT", "htmltools", 
-          "geomtextpath", "viridis", "reticulate", "googlesheets4"))
+          install.packages("renv", repos = "https://cloud.r-project.org")
+          # Força a instalação dos pacotes essenciais diretamente no ambiente do renv
+          renv::install(c("knitr", "rmarkdown", "gsheet", "googlesheets4", "corrplot", 
+          "tidyverse", "nlme", "reactable", "DT", "htmltools", "geomtextpath", "viridis", 
+          "reticulate"), prompt = FALSE)
         shell: Rscript {0}
         
       # # --- 5. INSTALAÇÃO DOS PACOTES R (Níveis de Fator: TCC e Projetos) ---
