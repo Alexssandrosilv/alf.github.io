@@ -1,21 +1,36 @@
 project:
   type: website
+  output-dir: docs
 
 website:
-  title: "alf.github.io"
-  navbar:
-    left:
-      - href: index.qmd
-        text: Home
-      - about.qmd
+  title: "ALF" # <--- Pode colocar "ΛΣ", "Dashboard", ou o nome que preferir
+  description: "Engenharia de Dados & Gestão"
+  
+  # Rodapé super minimalista
+  page-footer:
+    background: "black"
+    center: 
+      - text: "<b> © 2026 Alexssandro e Letícia</b>"
 
-format:
-  html:
-    theme:
-      - cosmo
-      - brand
-    css: styles.css
-    toc: true
+# Formato focado na estrutura de vitrine (sem menus laterais e numerações)
+format: 
+  html: 
+    theme: flatly
+    css: s8.css
+    toc: false 
+    number-sections: false
+    code-fold: true
+    code-summary: "Código"
+    
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Fira+Code&display=swap" rel="stylesheet">
 
+execute:
+  freeze: auto
+  message: false
+  warning: false
 
-
+lang: pt

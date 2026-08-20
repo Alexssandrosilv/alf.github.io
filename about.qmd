@@ -6,51 +6,31 @@ About this site
 
 ```{r}
 # ==============================================================================
-# PROJETO: ALF - Sistema Integrado de Gestão e Engenharia de Dados
-# MÓDULO: Camada Bronze (Ingestão de Dados Brutos via API Google Sheets)
-# AUTORES / GESTORES: Alexssandro Silva e Leticia Haifa
+# PROJETO ALF | Camada Bronze: Ingestão de Dados Brutos
+# Gestores: Alexssandro Silva e Leticia Haifa
 # ==============================================================================
 
-# --- 1. CARREGAMENTO DE BIBLIOTECAS E DEPENDÊNCIAS DO AMBIENTE ---
-# Nota técnica: Utiliza-se a chamada explícita para assegurar o isolamento 
-# de namespace, prevenir conflitos de funções e garantir a reprodutibilidade.
+# --- 1. CARREGAMENTO DE PACOTES ---
+library(googlesheets4) # Conexão e leitura via API do Google Sheets
+library(dplyr)         # Manipulação de tabelas
 
-library(googlesheets4) # Conectividade segura e consumo de dados via API Google Sheets
-library(dplyr)       # Manipulação e transformação estrutural de data frames
-
-# --- 2. CONFIGURAÇÃO DE AUTENTICAÇÃO SEGURA (COMPATIBILIDADE HÍBRIDA) ---
-# Contexto: Este bloco verifica dinamicamente o ambiente de execução.
-# - Em Produção (GitHub Actions): Resgata o segredo criptografado e gera o arquivo temporário.
-# - Em Desenvolvimento (Local): Resgata o caminho do arquivo de credenciais via .Renviron.
-
-if (base::nzchar(base::Sys.getenv("GCP_CREDENTIALS_JSON"))) {
-  # Ambiente de Nuvem (CI/CD): Escrita segura do token a partir do cofre de segredos
-  base::writeLines(base::Sys.getenv("GCP_CREDENTIALS_JSON"), "credentials_temp.json")
+# --- 2. AUTENTICAÇÃO HÍBRIDA ---
+if (nzchar(Sys.getenv("GCP_CREDENTIALS_JSON"))) {
+  # Nuvem (GitHub Actions): Configura credenciais via cofre de segredos
+  writeLines(Sys.getenv("GCP_CREDENTIALS_JSON"), "credentials_temp.json")
   googlesheets4::gs4_auth(path = "credentials_temp.json")
 } else {
-  # Ambiente Local (RStudio): Utilização da variável de ambiente local blindada
-  googlesheets4::gs4_auth(path = base::Sys.getenv("GCP_CREDENTIALS"))
+  # Local (RStudio): Utiliza o arquivo seguro definido no .Renviron
+  googlesheets4::gs4_auth(path = Sys.getenv("GCP_CREDENTIALS"))
 }
 
-# --- 3. REFERÊNCIA CENTRALIZADA DA FONTE DE DADOS ---
-# URI de apontamento para a planilha mestre de controle financeiro do ecossistema ALF
-
-
+# --- 3. URL DA PLANILHA MESTRE ---
 url_mestre <- "https://docs.google.com/spreadsheets/d/1f-IJQ21PyW9WoN1g8RPzJVK3K-weap2R4GJ_J8f2oGM/edit"
 
-# --- 4. INGESTÃO DOS DADOS BRUTOS (CAMADA BRONZE) ---
-# Extração modular de dados tabulares diretamente da origem, mantendo a 
-# integridade crua ("as-is") para posterior refinamento na Camada Prata.
-
-entradas_bruto      <- googlesheets4::read_sheet(url_mestre, sheet = "entradas")
-poupanca_bruto      <- googlesheets4::read_sheet(url_mestre, sheet = "poupanca")
-saidas_bruto        <- googlesheets4::read_sheet(url_mestre, sheet = "saidas")
-lista_desejos_bruto <- googlesheets4::read_sheet(url_mestre, sheet = "lista_desejos")
-
-# --- 5. VALIDAÇÃO E LOG DE EXECUÇÃO ---
-# Auditoria visual inicial para certificar a integridade do carregamento estrutural
-
-base::print("[LOG] Ingestão da Camada Bronze concluída com sucesso.")
-base::print(base::paste("Total de registros brutos em 'entradas':", base::nrow(entradas_bruto)))
-head(entradas_bruto)
+# --- 4. IMPORTAÇÃO DOS DADOS (CAMADA BRONZE) ---
+# Extração crua das abas preservando a integridade original dos dados
+entradas_bronze      <- googlesheets4::read_sheet(url_mestre, sheet = "entradas")
+poupanca_bronze      <- googlesheets4::read_sheet(url_mestre, sheet = "poupanca")
+saidas_bronze        <- googlesheets4::read_sheet(url_mestre, sheet = "saidas")
+lista_desejos_bronze <- googlesheets4::read_sheet(url_mestre, sheet = "lista_desejos")
 ```
