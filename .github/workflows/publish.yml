@@ -285,7 +285,7 @@ jobs:
       #     remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", 
       #     "tidyverse", "nlme", "reactable", "DT", "htmltools", 
       #     "geomtextpath", "viridis", "reticulate", "googlesheets4"))
-      #   shell: Rscript {0}
+      #   shell: Rscript {0} |> 
       #   
         # --- 4. INSTALAÇÃO DE PACOTES R VIA RENV ---
       - name: Install R Packages with renv
@@ -315,11 +315,14 @@ jobs:
       #       any::viridis
       #       any::ggrepel
       #       any::reticulate
+      #       
+      #       
 
-      # --- 6. RENDERIZAÇÃO E DEPLOY ---
+# --- 6. RENDERIZAÇÃO E DEPLOY COM INJEÇÃO DE CREDENCIAIS ---
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
         with:
           target: gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
