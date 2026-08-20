@@ -1,0 +1,809 @@
+/* ==========================================================================
+    ARQUIVO DE ESTILOS: S7.CSS
+    Portfólio ΛΣ Consultoria Estatística
+    Autor: Alexssandro Oliveira
+    Descrição: Estilos personalizados para Quarto (Tema Flatly + Glassmorphism)
+    Organização: Blocos Lógicos com Comentários Linha a Linha
+========================================================================== */
+
+/* ==========================================================================
+    BLOCO 1: FUNDAMENTOS (Setup Inicial)
+    Fontes, Variáveis de Cor e Configurações Globais do HTML/Body.
+========================================================================== */
+
+/* 1.1 Importação de Fontes (Google Fonts) */
+/* Importa as fontes Inter (Texto) e Fira Code (Código) dos servidores do Google */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Fira+Code&display=swap');
+
+/* 1.2 Variáveis Globais (:root) - O "Painel de Controle" das cores */
+:root {
+  /* -- Cores da Página -- */
+  --cor-fundo-site: #ffffff;    /* Define branco puro para fundos */
+  --cor-pagina: #ffffff;        /* Define branco para a página */
+  --cor-texto: #2a2a2a;         /* Cinza muito escuro (melhor leitura que preto 100%) */
+  --cor-borda-suave: #eeeeee;   /* Cinza quase branco para detalhes sutis */
+  --cor-borda-titulo: #dcdcdc;  /* Cinza médio para sublinhar títulos */
+  --cor-code-fundo: #f8f9fa;    /* Cinza gelo para o fundo dos códigos R/Python */
+  
+  /* -- Cores da Barra de Navegação -- */
+  --cor-navbar-fundo: black;    /* Fundo preto para o menu superior */
+  --cor-navbar-texto: #e0e0e0;  /* Texto cinza claro para os links */
+  --cor-navbar-hover: #FFFFFF;  /* Texto branco quando passa o mouse */
+  
+  /* -- Identidade Visual (Destaque) -- */
+  --cor-destaque-viva: #18bc9c;      /* Verde Teal Vibrante (Sua marca principal) */
+  --cor-destaque-escuro: #128f76; /* Verde Teal Escuro (Para interações/cliques) */
+}
+
+/* 1.3 Corpo do Site (Body) */
+body {
+  /* Cria o gradiente de fundo necessário para o efeito de vidro funcionar */
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);  
+  font-family: 'Inter', sans-serif; /* Define a fonte padrão de todo o site */
+  color: var(--cor-texto);          /* Define a cor padrão do texto */
+  line-height: 1.65;                /* AJUSTADO: Espaço entre linhas ideal */
+  margin: 0;                        /* Remove as margens padrão do navegador */
+  padding: 0;                       /* Remove o preenchimento padrão */
+  overflow-x: hidden;               /* Bloqueia a rolagem horizontal indesejada */
+}
+
+/* 1.4 Links Gerais (No meio do texto) */
+a {
+  color: var(--cor-destaque-viva); /* Usa o verde da marca nos links */
+  text-decoration: none;          /* Remove o sublinhado inicial */
+  font-weight: 700;               /* Deixa o link em negrito */
+  transition: all 0.2s ease;      /* Suaviza a animação de mudança de cor */
+}
+
+a:hover {
+  color: var(--cor-destaque-escuro); /* Escurece o verde ao passar o mouse */
+  text-decoration: underline;      /* Adiciona sublinhado ao passar o mouse */
+}
+
+/* 1.5 Tipografia (Títulos H1 a H6) */
+h1, h2, h3, h4 {
+  font-family: 'Inter', sans-serif; /* Força a fonte Inter nos títulos */
+  font-weight: 700;                 /* Define negrito forte */
+  color: var(--cor-texto);          /* Usa a cor de texto padrão */
+}
+
+h3 {
+  font-size: 1.5em; /* NOVO: Tamanho robusto para subtítulos de seção (Metodologia) */
+  font-weight: 800; /* NOVO: Negrito extra forte */
+  margin-top: 1.5em; 
+  margin-bottom: 0.8em; 
+}
+
+h2 {
+  border-bottom: 2px solid var(--cor-borda-titulo); /* Cria a linha cinza abaixo do título */
+  padding-bottom: 8px;              /* Dá um espaço entre o texto e a linha */
+  margin-top: 2em;                  /* Adiciona espaço acima do título */
+}
+
+/* 1.6 Blocos de Código (Code Chunks) */
+pre {
+  font-family: 'Fira Code', monospace;      /* Usa a fonte de código monoespaçada */
+  background-color: var(--cor-code-fundo);  /* Aplica o fundo cinza gelo */
+  border-radius: 5px;                       /* Arredonda levemente os cantos */
+  padding: 1em;                             /* Adiciona espaço interno */
+  border: 1px solid var(--cor-borda-suave); /* Adiciona uma borda fina */
+}
+
+code {
+  font-family: 'Fira Code', monospace;      /* Fonte monoespaçada para código em linha */
+  background-color: var(--cor-code-fundo);  /* Fundo cinza gelo */
+  padding: 0.2em 0.4em;                     /* Espaço ao redor da palavra */
+  border-radius: 4px;                       /* Arredonda os cantos */
+  font-size: 0.9em;                         /* Diminui levemente a fonte */
+}
+
+
+/* ==========================================================================
+    BLOCO 2: ESTRUTURA DO LAYOUT
+    O container principal (papel de vidro) e o rodapé.
+========================================================================== */
+
+/* 2.1 Conteúdo Principal (Efeito Glassmorphism) */
+main#quarto-content {
+  background-color: rgba(255, 255, 255, 0.9); /* Define fundo branco com transparência */
+  backdrop-filter: blur(10px);          /* Aplica desfoque no que está atrás */
+  -webkit-backdrop-filter: blur(10px);  /* Garante que funcione no Safari */
+  
+  max-width: 1000px;    /* Limita a largura em telas grandes */
+  width: 90%;           /* Ocupa 90% da largura em telas menores */
+  margin: 40px auto;    /* Centraliza o bloco na tela */
+  padding: 3em 4em;     /* Adiciona bastante espaço interno */
+  
+  border-radius: 12px;  /* Arredonda os cantos da folha */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); /* Adiciona sombra suave 3D */
+  border: 1px solid rgba(255, 255, 255, 0.5);  /* Adiciona borda semi-transparente */
+}
+
+/* 2.2 Rodapé (Footer) */
+.quarto-page-footer {
+    background-color: black !important;      /* Força o fundo preto */
+    color: white !important;                 /* Força o texto branco */
+    padding-top: 3rem !important;            /* Espaço interno superior */
+    padding-bottom: 3rem !important;         /* Espaço interno inferior */
+    border-top: 3px solid var(--cor-destaque-viva); /* Cria a linha verde no topo */
+    margin-top: 4em !important;              /* Afasta do conteúdo principal */
+    font-size: 1.3em !important;             /* Aumenta o tamanho da fonte */
+}
+
+.quarto-page-footer .footer-text {
+    max-width: 95% !important;               /* Limita a largura do texto */
+    display: flex !important;                /* Usa Flexbox para alinhar */
+    justify-content: space-between !important; /* Espalha itens para as pontas */
+    align-items: center !important;          /* Centraliza verticalmente */
+    flex-wrap: wrap !important;              /* Permite quebrar linha se necessário */
+}
+
+.quarto-page-footer a {
+    color: #eeeeee !important;               /* Define cor cinza claro para links */
+    font-weight: bold !important;            /* Deixa links em negrito */
+}
+
+.quarto-page-footer .bi {
+    font-size: 2.2em !important;             /* Aumenta o tamanho dos ícones */
+    margin-left: 20px !important;            /* Adiciona margem à esquerda */
+    color: white !important;                 /* Define cor branca inicial */
+    transition: all 0.3s;                    /* Suaviza a animação */
+}
+
+.quarto-page-footer .bi:hover {
+    color: var(--cor-destaque-viva) !important; /* Muda para verde ao passar o mouse */
+    transform: translateY(-5px) scale(1.2);      /* Faz o ícone pular e crescer */
+}
+
+
+/* ==========================================================================
+    BLOCO 3: NAVEGAÇÃO E PESQUISA
+    Menu superior, correções de largura e fixes da barra de busca.
+========================================================================== */
+
+/* 3.1 Estilo Visual da Navbar */
+.navbar {
+  background-color: var(--cor-navbar-fundo) !important; /* Força fundo preto */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); /* Adiciona sombra preta abaixo */
+  border-bottom: 3px solid var(--cor-destaque-viva); /* Adiciona linha verde neon */
+  padding: 1rem 0;                      /* Define a altura da barra */
+  position: sticky;                     /* Faz o menu grudar ao rolar */
+  top: 0;                               /* Posiciona no topo absoluto */
+  z-index: 1000;                        /* Coloca acima de todos os elementos */
+  display: flex;                        /* Usa layout flexível */
+  justify-content: center;              /* Centraliza o conteúdo */
+}
+
+.navbar-nav {
+    width: 100%;                        /* Ocupa toda a largura disponível */
+    max-width: 1000px;                  /* Limita a largura para alinhar com o texto */
+    display: flex;                      /* Usa layout flexível */
+    justify-content: flex-start;        /* Alinha os itens à esquerda */
+    margin: 0 auto;                     /* Centraliza o bloco na tela */
+}
+
+.navbar-nav .nav-link {
+  color: var(--cor-navbar-texto) !important; /* Define cor cinza claro */
+  font-weight: 700;                     /* Define negrito */
+  margin-right: 1.5em;                  /* Adiciona espaço à direita */
+  padding: 0.5em 0.8em;                 /* Define área clicável */
+  border-radius: 5px;                   /* Arredonda os botões */
+  transition: all 0.2s ease-in-out;     /* Suaviza a animação */
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+  background-color: transparent !important; /* Remove fundo cinza padrão */
+  color: var(--cor-destaque-viva) !important; /* Muda texto para Verde Neon */
+  text-shadow: 0 0 10px rgba(24, 188, 156, 0.4); /* Adiciona brilho neon */
+  text-decoration: none !important;         /* Garante que não tenha sublinhado */
+}
+
+.navbar-brand {
+    font-weight: 700;                       /* Define negrito */
+    color: var(--cor-navbar-hover) !important; /* Define cor branca */
+    font-size: 1.4em;                       /* Aumenta o tamanho da fonte */
+    margin-right: 2em;                      /* Adiciona espaço à direita */
+}
+
+/* 3.2 Correção de Largura (Navbar 100%) - Força o menu até os cantos */
+.navbar .container-fluid, 
+.navbar .container-xxl, 
+.navbar .container {
+    max-width: 100% !important;             /* Força largura máxima total */
+    width: 100% !important;                 /* Força largura total */
+    padding-left: 30px !important;          /* Adiciona margem interna esquerda */
+    padding-right: 30px !important;         /* Adiciona margem interna direita */
+}
+
+.navbar-collapse {
+    flex-grow: 1;                           /* Ocupa todo o espaço restante */
+    justify-content: space-between;         /* Espalha os itens */
+}
+
+/* 3.3 Correção da Barra de Pesquisa (Desktop) - Fix do Cursor Fugindo */
+.quarto-search-autocomplete {
+    z-index: 9999 !important;               /* Força resultados no topo da pilha */
+}
+
+#quarto-search-input {
+    z-index: 10000 !important;              /* Força input acima dos resultados */
+    position: relative !important;          /* Necessário para z-index funcionar */
+}
+
+.aa-Input {
+    border: 1px solid var(--cor-destaque-viva) !important; /* Adiciona borda verde */
+    background-color: rgba(255, 255, 255, 0.95) !important; /* Fundo quase branco */
+    color: #000 !important;                 /* Texto preto */
+    border-radius: 5px !important;          /* Arredonda cantos */
+}
+
+/* 3.4 Correção da Barra de Pesquisa (Mobile) - Fix do Teclado */
+/*@media (max-width: 992px) {
+/*    /* Garante que o menu mobile fique no topo */
+/*    .navbar-collapse { z-index: 10000 !important; }
+    
+/*    /* Garante que o input de busca fique visível e no topo */
+/*    #quarto-search-input {
+/*        z-index: 10001 !important;          /* Acima do menu */
+/*        opacity: 1 !important;              /* Força visibilidade */
+/*    }
+/*    
+/*    /* Fixa a janela de resultados na tela para não quebrar com teclado */
+/*    .quarto-search-autocomplete {
+/*        z-index: 10002 !important;          /* Acima de tudo */
+/*        position: fixed !important;         /* Fixa na tela (viewport) */
+/*        top: 70px !important;               /* Distância do topo */
+/*        left: 5% !important;                /* Margem esquerda */
+/*        width: 90% !important;              /* Largura responsiva */
+/*        max-height: 60vh !important;        /* Altura máxima da lista */
+/*        overflow-y: auto !important;        /* Permite rolar a lista */
+/*        box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important; /* Sombra forte */
+/*    }
+/*}
+
+/* 3.4 Correção da Barra de Pesquisa (Mobile) - Fix do Teclado e Texto Sumindo */
+@media (max-width: 992px) {
+    /* Garante que o menu mobile fique no topo */
+    .navbar-collapse { z-index: 10000 !important; }
+    
+    /* FIX DA LUPA: Garante que o input fique visível e o texto não suma na esquerda */
+    #quarto-search-input {
+        z-index: 10001 !important;          /* Acima do menu */
+        opacity: 1 !important;              /* Força visibilidade */
+        padding-left: 35px !important;      /* AJUSTE: Dá espaço para as primeiras letras aparecerem */
+        height: 40px !important;            /* AJUSTE: Altura confortável para o toque no celular */
+        width: 100% !important;             /* Garante largura total */
+    }
+    
+    /* Fixa a janela de resultados na tela para não quebrar com teclado */
+    .quarto-search-autocomplete {
+        z-index: 10002 !important;          /* Acima de tudo */
+        position: fixed !important;         /* Fixa na tela (viewport) */
+        top: 70px !important;               /* Distância do topo */
+        left: 5% !important;                /* Margem esquerda */
+        width: 90% !important;              /* Largura responsiva */
+        max-height: 60vh !important;        /* Altura máxima da lista */
+        overflow-y: auto !important;        /* Permite rolar a lista */
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important; /* Sombra forte */
+    }
+
+    /* AJUSTE EXTRA: Garante que o texto digitado tenha cor preta e seja legível */
+    .aa-Input {
+        padding-left: 35px !important;
+        color: #000 !important;
+    }
+}
+
+
+/* ==========================================================================
+    BLOCO 4: PÁGINA INICIAL (HOME)
+    Elementos exclusivos da Index: Animações e Botões de Ação.
+========================================================================== */
+
+/* 4.1 Animações de Entrada (Foto e Texto) */
+.about-image {
+    /* Executa animação 'slideInLeft' de 1 segundo */
+    animation: slideInLeft 1s cubic-bezier(0.23, 1, 0.32, 1) forwards !important;
+}
+
+.about-contents {
+    /* Executa animação 'slideInRight' com atraso de 0.2s */
+    animation: slideInRight 1s cubic-bezier(0.23, 1, 0.32, 1) 0.2s forwards !important;
+}
+
+/* Keyframes: Define o movimento da esquerda para o centro */
+@keyframes slideInLeft {
+    from { transform: translateX(-50px); opacity: 0; } /* Início: deslocado e invisível */
+    to { transform: translateX(0); opacity: 1; }        /* Fim: posição original e visível */
+}
+
+/* Keyframes: Define o movimento da direita para o centro */
+@keyframes slideInRight {
+    from { transform: translateX(50px); opacity: 0; }  /* Início: deslocado e invisível */
+    to { transform: translateX(0); opacity: 1; }        /* Fim: posição original e visível */
+}
+
+/* 4.2 Botões de Ação Personalizados */
+
+/* Botão Principal (Verde Teal) */
+.btn-action-primary {
+    background-color: #18bc9c;           /* Fundo Verde */
+    border: 2px solid #18bc9c;           /* Borda Verde */
+    color: white !important;             /* Texto Branco */
+    padding: 12px 30px;                  /* Tamanho interno */
+    border-radius: 50px;                 /* Borda totalmente redonda */
+    text-decoration: none !important;    /* REMOVE SUBLINHADO FORCE */
+    font-weight: 700;                    /* Negrito */
+    font-family: 'Inter', sans-serif;    /* Fonte */
+    transition: all 0.3s ease;           /* Animação suave */
+    white-space: nowrap;                 /* Texto não quebra linha */
+    display: inline-flex;                /* Permite alinhar ícones */
+    align-items: center;                 /* Centraliza ícone verticalmente */
+    gap: 8px;                            /* Espaço entre ícone e texto */
+}
+
+/* Estados Hover, Focus e Active do Botão Principal */
+.btn-action-primary:hover,
+.btn-action-primary:focus,
+.btn-action-primary:active {
+    background-color: #000000;             /* Fundo vira Preto */
+    border-color: #000000;                 /* Borda vira Preta */
+    color: white !important;               /* Texto continua Branco */
+    transform: translateY(-3px);           /* Botão sobe levemente */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* Sombra aparece embaixo */
+    text-decoration: none !important;      /* GARANTE SEM SUBLINHADO */
+}
+
+/* Botão Secundário (Transparente) */
+.btn-action-secondary {
+    background-color: transparent;         /* Fundo transparente */
+    border: 2px solid #333;                /* Borda cinza escura */
+    color: #333 !important;                /* Texto cinza escuro */
+    padding: 12px 30px;                    /* Tamanho interno */
+    border-radius: 50px;                   /* Borda totalmente redonda */
+    text-decoration: none !important;      /* REMOVE SUBLINHADO FORCE */
+    font-weight: 700;                      /* Negrito */
+    font-family: 'Inter', sans-serif;      /* Fonte */
+    transition: all 0.3s ease;             /* Animação suave */
+    white-space: nowrap;                   /* Texto não quebra linha */
+    display: inline-flex;                  /* Permite alinhar ícones */
+    align-items: center;                   /* Centraliza ícone verticalmente */
+    gap: 8px;                              /* Espaço entre ícone e texto */
+}
+
+/* Estados Hover, Focus e Active do Botão Secundário */
+.btn-action-secondary:hover,
+.btn-action-secondary:focus,
+.btn-action-secondary:active {
+    background-color: #000000;             /* Fundo vira Preto */
+    border-color: #000000;                 /* Borda vira Preta */
+    color: white !important;               /* Texto vira Branco */
+    transform: translateY(-3px);           /* Botão sobe levemente */
+    text-decoration: none !important;      /* GARANTE SEM SUBLINHADO */
+}
+
+
+/* ==========================================================================
+    BLOCO 5: PÁGINA DE PORTFÓLIO
+    Estilização dos Cards e Grid de Projetos.
+========================================================================== */
+.quarto-grid-item.card {
+    background: rgba(255, 255, 255, 0.65);  /* Fundo vidro fosco */
+    backdrop-filter: blur(12px) saturate(120%); /* Desfoque forte */
+    -webkit-backdrop-filter: blur(12px) saturate(120%); /* Compatibilidade Safari */
+    
+    border: 1px solid rgba(255, 255, 255, 0.6); /* Borda fina */
+    border-radius: 16px;                     /* Cantos arredondados */
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); /* Sombra azulada */
+    
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animação elástica */
+    overflow: hidden;                        /* Esconde conteúdo que vaza */
+    height: 100%;                            /* Altura ocupa tudo */
+}
+
+/* Hover no Card */
+.quarto-grid-item.card:hover {
+    transform: translateY(-8px);             /* Card levita */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12); /* Sombra aumenta */
+    border: 1px solid var(--cor-destaque-viva);  /* Borda fica Verde */
+    background: rgba(255, 255, 255, 0.8);    /* Fundo fica mais opaco */
+}
+
+/* Título muda de cor no hover do Card */
+.quarto-grid-item.card:hover .card-title {
+    color: var(--cor-destaque-viva);         /* Título fica Verde */
+}
+
+/* Clique no Card */
+.quarto-grid-item.card:active {
+    transform: scale(0.97) translateY(0);    /* Efeito de clique (afunda) */
+}
+
+/* Imagens dos Projetos */
+.quarto-grid-image {
+    height: 220px;                           /* Define altura fixa */
+    width: 100%;                             /* Largura total */
+    object-fit: cover;                       /* Corta imagem para caber */
+    transition: transform 0.5s ease;         /* Animação de zoom */
+}
+
+/* Zoom na imagem ao passar o mouse */
+.quarto-grid-item.card:hover .quarto-grid-image {
+    transform: scale(1.05);                  /* Aumenta 5% */
+}
+
+.card-body { padding: 1.8rem; }              /* Define espaço interno do texto */
+
+.card-title {
+    color: var(--cor-texto);                 /* Cor do título */
+    font-weight: 700;                        /* Negrito */
+    font-size: 1.2rem;                       /* Tamanho da fonte */
+    margin-bottom: 0.5rem;                   /* Espaço abaixo */
+    transition: color 0.3s ease;             /* Animação de cor */
+}
+
+.card-text { color: #666666; font-size: 0.95rem; } /* Estilo da descrição */
+
+/* Categorias (Tags) */
+.listing-categories .listing-category {
+    background-color: rgba(255, 255, 255, 0.5); /* Fundo semi-transparente */
+    color: var(--cor-texto);                 /* Cor do texto */
+    border-radius: 15px;                     /* Formato de pílula */
+    padding: 2px 10px;                       /* Espaçamento interno */
+    font-size: 0.75em;                       /* Fonte pequena */
+    border: 1px solid rgba(0,0,0,0.1);       /* Borda sutil */
+    transition: all 0.2s;                    /* Animação */
+}
+
+/* Hover nas Categorias */
+.listing-categories .listing-category:hover {
+    background-color: var(--cor-destaque-viva); /* Fundo Verde */
+    color: white;                            /* Texto Branco */
+    border-color: var(--cor-destaque-viva);  /* Borda Verde */
+}
+
+
+/* ==========================================================================
+    BLOCO 6: PÁGINA DE CONSULTORIA
+    Formulário de Contato Estilo Glass (Clean & Light).
+========================================================================== */
+
+/* 6.1 Container do Formulário */
+.form-container {
+  display: flex;                        /* Ativa Flexbox */
+  justify-content: center;              /* Centraliza horizontalmente */
+  width: 100%;                          /* Ocupa largura total */
+  margin-top: 2rem;                     /* Margem superior */
+  margin-bottom: 3rem;                  /* Margem inferior */
+}
+
+/* 6.2 O Cartão do Formulário */
+.form {
+  display: flex;                        /* Ativa Flexbox */
+  flex-direction: column;               /* Organiza em coluna */
+  gap: 15px;                            /* Espaço entre campos */
+  padding: 3em;                         /* Espaço interno */
+  
+  background-color: rgba(255, 255, 255, 0.85); /* Fundo branco vidro */
+  backdrop-filter: blur(12px);          /* Desfoque do fundo */
+  -webkit-backdrop-filter: blur(12px);  /* Safari */
+  
+  width: 90%;                           /* Ocupa 90% da página */
+  max-width: 1000px;                    /* Limite de largura */
+  
+  border-radius: 20px;                  /* Cantos arredondados */
+  border: 1px solid rgba(255, 255, 255, 0.6); /* Borda fina branca */
+  box-shadow: 0 15px 35px rgba(0,0,0,0.05); /* Sombra suave */
+  transition: all 0.3s ease-in-out;     /* Animação geral */
+}
+
+/* Hover no Formulário */
+.form:hover {
+  transform: translateY(-3px);            /* Levita */
+  border-color: rgba(24, 188, 156, 0.3);  /* Borda brilha verde */
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1); /* Sombra aumenta */
+}
+
+/* 6.3 Título do Form */
+#heading {
+  text-align: left;                     /* Alinha à esquerda */
+  margin: 0 0 1em 0;                    /* Margem inferior */
+  color: #2a2a2a;                       /* Cor do texto */
+  font-size: 1.8em;                     /* Tamanho grande */
+  font-weight: 800;                     /* Negrito extra */
+  font-family: 'Inter', sans-serif;     /* Fonte */
+  letter-spacing: -0.5px;               /* Letras juntas */
+  border-bottom: 2px solid #eee;        /* Linha decorativa */
+  padding-bottom: 15px;                 /* Espaço da linha */
+}
+
+/* 6.4 Campos de Input (Container) */
+.field {
+  display: flex;                        /* Flexbox para ícone+input */
+  align-items: center;                  /* Alinha verticalmente */
+  gap: 0.8em;                           /* AJUSTADO: Espaço entre ícone e campo */
+  border-radius: 8px;                   /* Cantos arredondados */
+  padding: 1.2em 1em;                   /* AJUSTADO: Mais alto para usabilidade móvel */
+  background-color: #f8f9fa;            /* Fundo cinza claro */
+  border: 1px solid #e1e4e8;            /* Borda cinza */
+  transition: all 0.3s;                 /* Animação */
+}
+
+/* Foco no Campo */
+.field:focus-within {
+  background-color: #ffffff;            /* Fica branco */
+  border-color: var(--cor-destaque-viva); /* Borda Verde */
+  box-shadow: 0 0 0 4px rgba(24, 188, 156, 0.1); /* Anel Verde */
+}
+
+/* Ícones dos Campos */
+.input-icon {
+  height: 1.2em;                        /* Altura */
+  width: 1.2em;                         /* Largura */
+  fill: var(--cor-destaque-viva);       /* Cor Verde */
+  min-width: 24px;                      /* Tamanho mínimo */
+}
+
+/* Área de Texto Digitado */
+.input-field {
+  background: none;                     /* Sem fundo */
+  border: none;                         /* Sem borda */
+  outline: none;                        /* Sem contorno */
+  width: 100%;                          /* Largura total */
+  color: #333;                          /* Cor do texto */
+  font-family: 'Inter', sans-serif;     /* Fonte */
+  font-weight: 500;                     /* Peso médio */
+  font-size: 1.05em;                    /* AJUSTADO: Texto digitado levemente maior */
+}
+
+.input-field::placeholder { color: #999; }  /* Cor do placeholder */
+
+/* 6.5 Select e Textarea Específicos */
+select.input-field {
+    cursor: pointer;                        /* Cursor de mão */
+    color: #333;                            /* Cor do texto */
+    background-color: transparent;          /* Fundo transparente */
+}
+
+textarea.input-field {
+  resize: vertical;                       /* Redimensiona verticalmente */
+  min-height: 120px;                      /* Altura mínima */
+  padding-top: 5px;                       /* Espaço topo */
+}
+
+/* 6.6 Botão de Enviar */
+.btn-submit {
+  display: flex;                        /* Flexbox */
+  justify-content: flex-start;          /* Alinha à esquerda */
+  margin-top: 1em;                      /* Margem superior */
+}
+
+.button1 {
+  padding: 1.2em 4em;                     /* Tamanho grande */
+  border-radius: 8px;                     /* Cantos */
+  border: none;                           /* Sem borda */
+  background-color: var(--cor-destaque-viva); /* Fundo Verde */
+  color: white;                           /* Texto Branco */
+  font-weight: 700;                       /* Negrito */
+  cursor: pointer;                        /* Mãozinha */
+  font-family: 'Inter', sans-serif;       /* Fonte */
+  text-transform: uppercase;              /* Maiúsculas */
+  letter-spacing: 1px;                    /* Espaçamento letras */
+  transition: .3s ease-in-out;            /* Animação */
+}
+
+.button1:hover {
+  background-color: #000000;              /* Fica Preto */
+  transform: translateY(-2px);            /* Sobe */
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15); /* Sombra */
+}
+
+/* 6.7 Botão de Arquivo (Input File) - MELHORIAS VISUAIS APLICADAS */
+input[type="file"]::file-selector-button {
+  border-radius: 6px;                     /* Cantos */
+  padding: 8px 16px;                      /* Tamanho interno */
+  height: 36px;                           /* Altura fixa */
+  cursor: pointer;                        /* Mãozinha */
+  background-color: var(--cor-destaque-viva); /* FIX: Fundo Verde da marca */
+  border: none;                           /* Sem borda */
+  color: white;                           /* FIX: Texto Branco para contraste */
+  margin-right: 15px;                     /* Margem direita */
+  transition: all 0.3s;                   /* Animação */
+  font-weight: bold;                      /* Negrito */
+}
+
+input[type="file"]::file-selector-button:hover {
+  background-color: var(--cor-destaque-escuro); /* AJUSTADO: Escurece o verde no hover */
+  color: white;
+}
+
+
+/* ==========================================================================
+    BLOCO 7: COMPONENTES GERAIS
+    Abas (Tabs) e Hacks de Acessibilidade.
+========================================================================== */
+
+/* 7.1 Estilização das Abas (Tabs) */
+.panel-tabset .nav-link.active {
+    text-decoration: none;                  /* Sem sublinhado */
+    font-weight: 700 !important;            /* Negrito */
+    color: var(--cor-destaque-viva) !important; /* Texto Verde */
+    background-color: rgba(255, 255, 255, 0.8) !important; /* Fundo claro */
+    border-color: var(--cor-borda-suave) !important; /* Borda suave */
+    border-bottom-color: transparent !important; /* Conecta com o conteúdo */
+    border-top: 3px solid var(--cor-destaque-viva) !important; /* Linha verde topo */
+}
+
+.panel-tabset .nav-link:hover {
+    text-decoration: none;                  /* Sem sublinhado */
+    color: var(--cor-destaque-escuro) !important; /* Verde escuro */
+    background-color: rgba(255, 255, 255, 0.4); /* Fundo leve */
+}
+
+.panel-tabset .nav-link {
+    color: #666;                            /* Texto cinza padrão */
+    transition: all 0.3s ease;              /* Animação */
+}
+
+/* 7.2 Hack de Animação (Prefers-reduced-motion) */
+/* Garante que o site tenha movimento mesmo se o SO pedir para reduzir */
+@media (prefers-reduced-motion: reduce) {
+  .about-image, .about-contents, .quarto-grid-item.card,
+  .quarto-grid-image, .navbar-nav .nav-link, a {
+    animation-play-state: running !important; /* Força animação */
+    transition: all 0.3s ease !important;     /* Força transição */
+  }
+}
+
+
+/* ==========================================================================
+    BLOCO 8: SIDEBAR E NAVEGAÇÃO LATERAL (Lista de Arquivos)
+    Remove o azul padrão do Quarto e aplica a identidade Verde Teal.
+========================================================================== */
+
+/* 8.1 Links Ativos e Hover na Lateral */
+/*.sidebar-item-text.active, 
+/*.sidebar-item-container.active,
+/*.sidebar-navigation .active,
+/*nav[role=doc-toc] ul li a.active {
+    color: var(--cor-destaque-viva) !important; /* Texto Verde */
+/*    font-weight: 700 !important;
+/*}
+
+/* 8.2 A "Barrinha" lateral que fica azul */
+/*.sidebar-item-container {
+/*    border-left: 3px solid transparent; /* Reserva o espaço */
+/*    transition: all 0.3s;
+}
+
+.sidebar-item-container.active,
+.sidebar-item-container:hover {
+    border-left: 3px solid var(--cor-destaque-viva) !important; /* Barrinha Verde */
+/*    background-color: rgba(24, 188, 156, 0.05) !important; /* Fundo sutil */
+/*}
+
+/* 8.3 Ajuste de Títulos e Botões da Sidebar */
+/*.sidebar-title, .quarto-sidebar-toggle {
+/*    color: var(--cor-texto) !important;
+/*}
+
+.quarto-sidebar-toggle:hover {
+    color: var(--cor-destaque-viva) !important;
+}
+
+
+/* ==========================================================================
+    BLOCO 9: CORREÇÕES ESPECÍFICAS DA GALERIA (VITRINE)
+    Remove listagens automáticas de arquivos e limpa o visual dos cards.
+========================================================================== */
+
+/* 9.1 Remoção de Ruído Visual */
+/* Esconde a lista de arquivos (scripts/gráficos) que o Quarto tenta puxar para o card */
+.quarto-grid-item .listing-file-list, 
+.quarto-grid-item .metadata,
+.quarto-grid-item .listing-reading-time {
+    display: none !important; /* Força o desaparecimento da lista indesejada */
+}
+
+/* 9.2 Ajuste de Espaçamento Interno */
+/* Garante que o corpo do card foque apenas no Título e Descrição que você definiu */
+.card-body .card-text {
+    margin-top: 10px;          /* Espaço entre o título e a descrição */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;     /* Limita a descrição a 3 linhas para manter o alinhamento */
+    -webkit-box-orient: vertical;
+    overflow: hidden;          /* Esconde o excesso de texto se houver */
+}
+
+/* 9.3 Correção de Alinhamento das Categorias */
+/* Ajusta a margem superior das tags para não colarem no texto */
+.quarto-grid-item .listing-categories {
+    margin-top: auto;          /* Empurra as tags para o fundo do card */
+    padding-top: 15px;         /* Espaço acima das pílulas de categoria */
+}
+
+
+/* ==========================================================================
+    BLOCO 10: EFEITO DE PARTÍCULAS (BACKGROUND ANIMADO)
+========================================================================== */
+
+/*#particles-js {
+/*    position: fixed;    /* Fixa na tela inteira */
+/*    width: 100%;
+/*    height: 100%;
+/*    top: 0;
+/*    left: 0;
+/*    z-index: -1;        /* Coloca ATRÁS de todo o conteúdo */
+/*    background-color: var(--cor-fundo-site); /* Usa o fundo que você já definiu */
+/*}
+
+/* Ajuste para o conteúdo Glassmorphism não esconder as partículas totalmente */
+/*main#quarto-content {
+/*    background-color: rgba(255, 255, 255, 0.7) !important; /* Mais transparência para ver o efeito */
+/*}
+
+
+/* ==========================================================================
+    BLOCO 10: EFEITO DE PARTÍCULAS (BACKGROUND ANIMADO)
+    Configura a camada mais profunda do site onde as bolinhas flutuam.
+========================================================================== */
+
+#particles-js {
+    position: fixed;            /* Faz o fundo ficar parado enquanto você rola a página */
+    width: 100%;                /* Ocupa toda a largura da tela */
+    height: 100%;               /* Ocupa toda a altura da tela */
+    top: 0;                     /* Alinha no topo absoluto */
+    left: 0;                    /* Alinha na esquerda absoluta */
+    z-index: -3;                /* CAMADA MAIS FUNDA: Fica atrás do Snoopy (-2) e do conteúdo (0) */
+    background-color: var(--cor-fundo-site); /* Cor base do site definida nas variáveis */
+}
+
+/* Ajuste do Conteúdo Principal (Glassmorphism) */
+main#quarto-content {
+    /* Deixa o fundo branco levemente transparente para as partículas aparecerem no fundo */
+    background-color: rgba(255, 255, 255, 0.8) !important; 
+    backdrop-filter: blur(5px); /* Cria um leve desfoque (blur) no fundo para facilitar a leitura */
+    border-radius: 10px;        /* Arredonda as bordas do conteúdo principal */
+}
+
+/* ==========================================================================
+    BLOCO 11: CORREÇÃO DEFINITIVA DO RODAPÉ (FOOTER)
+    Objetivo: Rodapé preto sólido, sem barra verde e com texto cinza.
+========================================================================== */
+
+/* 11.1 REMOÇÃO DA BARRA VERDE E FUNDO PRETO:
+   Ataca todos os nomes que o Quarto usa para garantir que a linha verde suma */
+footer.footer, 
+.quarto-page-footer, 
+.nav-footer,
+.quarto-page-footer-container {
+    background-color: #000000 !important; /* Força o fundo PRETO sólido */
+    border-top: none !important;           /* REMOVE A BARRA VERDE TOTALMENTE */
+    border-top-width: 0px !important;      /* Garante que a espessura seja zero */
+    position: relative !important;         /* Para o z-index funcionar */
+    z-index: 999 !important;               /* Fica na frente das partículas e do Snoop */
+    opacity: 1 !important;                 /* Sem transparência */
+    margin-top: 0px !important;            /* Sem espaço sobrando no topo */
+}
+
+/* 11.2 CORES ORIGINAIS (CINZA):
+   Mantém o texto e os ícones com a cor cinza que você já usava */
+.nav-footer-left, 
+.nav-footer-center, 
+.nav-footer-right, 
+.quarto-page-footer a, 
+.quarto-page-footer i {
+    color: #888888 !important;            /* Cor CINZA original (estilo minimalista) */
+    opacity: 1 !important;                 /* Texto bem nítido */
+    position: relative !important;
+    z-index: 1000 !important;              /* Texto por cima do fundo preto */
+    text-decoration: none !important;      /* Sem sublinhado nos links */
+}
+
+/* 11.3 LIMPEZA FINAL:
+   Remove sombras e bordas de baixo para o design ficar limpo */
+.quarto-page-footer {
+    box-shadow: none !important;          /* Sem sombras estranhas */
+    border-bottom: none !important;       /* Sem bordas no final da página */
+}
