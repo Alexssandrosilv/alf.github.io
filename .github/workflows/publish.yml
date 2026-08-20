@@ -268,12 +268,23 @@ jobs:
         with:
           r-version: 'latest' # Vamos para a versão mais atual estável
 
-      # --- 4. INSTALAÇÃO DOS PACOTES R ---
+      # # --- 4. INSTALAÇÃO DOS PACOTES R ---
+      # - name: Install R Packages
+      #   run: |
+      #     install.packages(c("remotes", "renv"))
+      #     # Forçamos a instalação ignorando o lockfile problemático
+      #     remotes::install_cran(c("knitr", "rmarkdown", "gsheet", 
+      #     "corrplot", "tidyverse", "nlme", "reactable", "DT", 
+      #     "htmltools", "geomtextpath", "viridis", "reticulate"))
+      #   shell: Rscript {0}
+        
+        # --- 4. INSTALAÇÃO DOS PACOTES R ---
       - name: Install R Packages
         run: |
           install.packages(c("remotes", "renv"))
-          # Forçamos a instalação ignorando o lockfile problemático
-          remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", "tidyverse", "nlme", "reactable", "DT", "htmltools", "geomtextpath", "viridis", "reticulate"))
+          remotes::install_cran(c("knitr", "rmarkdown", "gsheet", "corrplot", 
+          "tidyverse", "nlme", "reactable", "DT", "htmltools", 
+          "geomtextpath", "viridis", "reticulate", "googlesheets4"))
         shell: Rscript {0}
         
       # # --- 5. INSTALAÇÃO DOS PACOTES R (Níveis de Fator: TCC e Projetos) ---
