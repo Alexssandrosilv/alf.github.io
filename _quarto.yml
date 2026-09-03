@@ -4,7 +4,7 @@ project:
 
 website:
   title: "ALF" # <--- Pode colocar "ΛΣ", "Dashboard", ou o nome que preferir
-  description: "Engenharia de Dados & Gestão"
+  description: "Engenharia de Dados"
   
   # Rodapé super minimalista
   page-footer:

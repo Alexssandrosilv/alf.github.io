@@ -3,3 +3,14 @@
 .RData
 .Ruserdata
 .Renviron
+
+# Credenciais temporárias (geradas no CI)
+credentials_temp.json
+
+# Windows
+desktop.ini
+Thumbs.db
+
+# Quarto
+/.quarto/
+/_site/
