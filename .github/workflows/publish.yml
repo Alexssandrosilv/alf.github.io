@@ -37,14 +37,14 @@ jobs:
             libfribidi-dev \
             pandoc
 
-      # --- 2. CONFIGURAÇÃO DO PYTHON (Para Selenium e Reticulate) ---
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Jupyter and Automation Tools
-        run: pip install jupyter pandas matplotlib selenium
+      # --- 2. CONFIGURAÇÃO DO PYTHON (Desativado por enquanto — não usamos Python/Selenium ainda) ---
+      # - name: Install Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.10'
+      #
+      # - name: Install Jupyter and Automation Tools
+      #   run: pip install jupyter pandas matplotlib selenium
 
       # --- 3. CONFIGURAÇÃO DO QUARTO ---
       - name: Set up Quarto
@@ -56,7 +56,16 @@ jobs:
         with:
           r-version: 'latest'
 
-      # --- 5. INSTALAÇÃO DE PACOTES R VIA RENV ---
+      # --- 5. CACHE DOS PACOTES R (acelera builds seguintes) ---
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/renv
+          key: ${{ runner.os }}-renv-${{ hashFiles('renv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-renv-
+
+      # --- 6. INSTALAÇÃO DE PACOTES R VIA RENV ---
       - name: Install R Packages with renv
         run: |
           install.packages("renv", repos = "https://cloud.r-project.org")
@@ -65,7 +74,7 @@ jobs:
           "reticulate"), prompt = FALSE)
         shell: Rscript {0}
 
-      # --- 6. RENDERIZAÇÃO E DEPLOY COM INJEÇÃO DE CREDENCIAIS ---
+      # --- 7. RENDERIZAÇÃO E DEPLOY COM INJEÇÃO DE CREDENCIAIS ---
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
         with:
