@@ -1,36 +1,44 @@
 ---
-title: "About"
+title: "alf.github.io"
 ---
 
-About this site
+This is a Quarto website.
+
+To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
 
 ```{r}
 # ==============================================================================
-# PROJETO ALF | Camada Bronze: Ingestão de Dados Brutos
-# Gestores: Alexssandro Silva e Leticia Haifa
+# PROJETO ALF — Ingestão e limpeza básica dos dados via Google Sheets API
+# Autores: Alexssandro Silva e Leticia Haifa
 # ==============================================================================
 
-# --- 1. CARREGAMENTO DE PACOTES ---
-library(googlesheets4) # Conexão e leitura via API do Google Sheets
-library(dplyr)         # Manipulação de tabelas
+library(googlesheets4)
+library(dplyr)
 
-# --- 2. AUTENTICAÇÃO HÍBRIDA ---
-if (nzchar(Sys.getenv("GCP_CREDENTIALS_JSON"))) {
-  # Nuvem (GitHub Actions): Configura credenciais via cofre de segredos
-  writeLines(Sys.getenv("GCP_CREDENTIALS_JSON"), "credentials_temp.json")
+# --- Autenticação (CI usa secret; local usa .Renviron) ---
+if (base::nzchar(base::Sys.getenv("GCP_CREDENTIALS_JSON"))) {
+  base::writeLines(base::Sys.getenv("GCP_CREDENTIALS_JSON"), "credentials_temp.json")
   googlesheets4::gs4_auth(path = "credentials_temp.json")
 } else {
-  # Local (RStudio): Utiliza o arquivo seguro definido no .Renviron
-  googlesheets4::gs4_auth(path = Sys.getenv("GCP_CREDENTIALS"))
+  googlesheets4::gs4_auth(path = base::Sys.getenv("GCP_CREDENTIALS"))
 }
 
-# --- 3. URL DA PLANILHA MESTRE ---
-url_mestre <- "https://docs.google.com/spreadsheets/d/1f-IJQ21PyW9WoN1g8RPzJVK3K-weap2R4GJ_J8f2oGM/edit"
+# --- ID da planilha (via secret, nunca hardcoded) ---
+spreadsheet_id <- base::Sys.getenv("SPREADSHEET_ID")
+url_mestre <- base::paste0("https://docs.google.com/spreadsheets/d/", spreadsheet_id, "/edit")
 
-# --- 4. IMPORTAÇÃO DOS DADOS (CAMADA BRONZE) ---
-# Extração crua das abas preservando a integridade original dos dados
-entradas_bronze      <- googlesheets4::read_sheet(url_mestre, sheet = "entradas")
-poupanca_bronze      <- googlesheets4::read_sheet(url_mestre, sheet = "poupanca")
-saidas_bronze        <- googlesheets4::read_sheet(url_mestre, sheet = "saidas")
-lista_desejos_bronze <- googlesheets4::read_sheet(url_mestre, sheet = "lista_desejos")
+# --- Leitura das abas ---
+entradas_bruto      <- googlesheets4::read_sheet(url_mestre, sheet = "entradas")
+saidas_bruto        <- googlesheets4::read_sheet(url_mestre, sheet = "saidas")
+lista_desejos_bruto <- googlesheets4::read_sheet(url_mestre, sheet = "lista_desejos")
+
+base::print("[LOG] Ingestão concluída.")
+
+# --- Limpeza básica ---
+entradas      <- entradas_bruto      %>% filter(if_any(everything(), ~ !is.na(.)))
+saidas        <- saidas_bruto        %>% filter(if_any(everything(), ~ !is.na(.)))
+lista_desejos <- lista_desejos_bruto %>% filter(if_any(everything(), ~ !is.na(.)))
+
+print(paste("Registros válidos em 'entradas':", base::nrow(entradas)))
+head(entradas)
 ```
