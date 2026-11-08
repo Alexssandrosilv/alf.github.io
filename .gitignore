@@ -14,3 +14,10 @@ Thumbs.db
 # Quarto
 /.quarto/
 /_site/
+
+# Fotos: só as versões usadas no site
+imagens/*
+!imagens/*_transparente.png
+
+# Site gerado localmente (o GitHub publica pela branch gh-pages)
+/docs/

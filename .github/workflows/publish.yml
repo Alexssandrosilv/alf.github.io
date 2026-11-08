@@ -1,7 +1,12 @@
+# Publicação do site ALF na branch gh-pages
 on:
   push:
     branches: main
   workflow_dispatch:
+  # Opcional: republica todo dia para puxar dados novos da planilha.
+  # Para ligar, tire o # das duas linhas abaixo.
+  # schedule:
+  #   - cron: '0 9 * * *'   # 09:00 UTC = 05:00 em Manaus
 
 name: Quarto Publish
 
@@ -9,72 +14,95 @@ jobs:
   build-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pages: write
-      id-token: write
+      contents: write   # suficiente para publicar na gh-pages
 
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Resolve o aviso de depreciação do Node.js
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # O projeto tem renv ativo (.Rprofile). Aqui os pacotes vêm do passo 4,
+      # então desligamos o autoload do renv para o R do CI enxergar esses pacotes.
+      RENV_CONFIG_AUTOLOADER_ENABLED: "false"
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # --- 1. DEPENDÊNCIAS DE SISTEMA (Crucial para pacotes de R) ---
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libcurl4-openssl-dev \
-            libssl-dev \
-            libxml2-dev \
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libpng-dev \
-            libtiff5-dev \
-            libjpeg-dev \
-            libharfbuzz-dev \
-            libfribidi-dev \
-            pandoc
-
-      # --- 2. CONFIGURAÇÃO DO PYTHON (Desativado por enquanto — não usamos Python/Selenium ainda) ---
+      # --- 1. PYTHON (desativado por enquanto; descomente quando usar) ---
       # - name: Install Python
       #   uses: actions/setup-python@v5
       #   with:
       #     python-version: '3.10'
+      #     cache: 'pip'
       #
       # - name: Install Jupyter and Automation Tools
       #   run: pip install jupyter pandas matplotlib selenium
 
-      # --- 3. CONFIGURAÇÃO DO QUARTO ---
+      # --- 2. QUARTO ---
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      # --- 4. CONFIGURAÇÃO DO R ---
+      # --- 3. R (binários prontos do Posit Package Manager) ---
       - name: Install R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: 'latest'
+          r-version: 'release'
+          use-public-rspm: true
 
-      # --- 5. CACHE DOS PACOTES R (acelera builds seguintes) ---
-      - name: Cache R packages
-        uses: actions/cache@v4
+      # --- 4. PACOTES DO R (com cache automático) ---
+      # Mantenha esta lista igual à de codigos/0_bibliotecas.R.
+      # Pacote que estiver lá e não estiver aqui é instalado na hora do render (lento).
+      # Dependências de sistema (libcurl, libxml2...) são resolvidas pela própria action.
+      - name: Install R Packages
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          path: ~/.local/share/renv
-          key: ${{ runner.os }}-renv-${{ hashFiles('renv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-renv-
+          cache-version: 1   # suba para 2, 3... para forçar reinstalação
+          packages: |
+            any::knitr
+            any::rmarkdown
+            any::googlesheets4
+            any::base64enc
+            any::gsheet
+            any::readxl
+            any::readr
+            any::tidyverse
+            any::janitor
+            any::lubridate
+            any::stringr
+            any::stringi
+            any::magrittr
+            any::reshape2
+            any::ggrepel
+            any::geomtextpath
+            any::ggtext
+            any::patchwork
+            any::corrplot
+            any::viridis
+            any::showtext
+            any::nlme
+            any::broom
+            any::bizdays
+            any::survival
+            any::survminer
+            any::forecast
+            any::psych
+            any::skimr
+            any::Hmisc
+            any::DT
+            any::reactable
+            any::kableExtra
+            any::flextable
+            any::gdtools
+            any::systemfonts
+            any::officer
+            any::htmltools
+            any::sjPlot
+            any::fdth
+            any::cli
+            any::plotly
+            any::tidyr
+            any::dplyr
+            any::here
 
-      # --- 6. INSTALAÇÃO DE PACOTES R VIA RENV ---
-      - name: Install R Packages with renv
-        run: |
-          install.packages("renv", repos = "https://cloud.r-project.org")
-          renv::install(c("knitr", "rmarkdown", "gsheet", "googlesheets4", "corrplot",
-          "tidyverse", "nlme", "reactable", "DT", "htmltools", "geomtextpath", "viridis",
-          "reticulate"), prompt = FALSE)
-        shell: Rscript {0}
-
-      # --- 7. RENDERIZAÇÃO E DEPLOY COM INJEÇÃO DE CREDENCIAIS ---
+      # --- 5. RENDERIZAÇÃO E DEPLOY (com credenciais via secrets) ---
       - name: Render and Publish
         uses: quarto-dev/quarto-actions/publish@v2
         with:

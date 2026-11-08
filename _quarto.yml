@@ -3,34 +3,83 @@ project:
   output-dir: docs
 
 website:
-  title: "ALF" # <--- Pode colocar "ΛΣ", "Dashboard", ou o nome que preferir
+  title: "ALF"
   description: "Engenharia de Dados"
-  
-  # Rodapé super minimalista
+
+  # Rodapé minimalista
   page-footer:
     background: "black"
-    center: 
+    center:
       - text: "<b> © 2026 Alexssandro e Letícia</b>"
 
-# Formato focado na estrutura de vitrine (sem menus laterais e numerações)
-format: 
-  html: 
+format:
+  html:
     theme: flatly
-    css: s8.css
-    toc: false 
+    css: estilo/s8.css
+    toc: false
     number-sections: false
     code-fold: true
     code-summary: "Código"
-    
+    tbl-cap-location: top
+
     include-in-header:
       - text: |
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Fira+Code&display=swap" rel="stylesheet">
 
+          <!-- Estilo do "Código" recolhível -->
+          <style>
+          details > summary {
+            color: #132a13;
+            font-weight: bold;
+            cursor: pointer;
+          }
+          </style>
+
+          <!-- Rótulo "Tabela N:" / "Figura N:" das legendas e citações no texto em verde -->
+          <script>
+          document.addEventListener('DOMContentLoaded', function () {
+
+            // 1) Rótulo "Tabela N:" ou "Figura N:" da legenda
+            document.querySelectorAll('figure figcaption, table caption').forEach(function (cap) {
+              if (cap.querySelector('.rotulo-tabela')) return;
+              var m = cap.textContent.match(/^\s*(Tabela|Figura)[\s\u00a0]*\d+\s*[.:]?/);
+              if (!m) return;
+              var restante = m[0].length;
+              var walker = document.createTreeWalker(cap, NodeFilter.SHOW_TEXT);
+              var range = document.createRange();
+              var n, iniciou = false;
+              while ((n = walker.nextNode())) {
+                if (!iniciou) { range.setStart(n, 0); iniciou = true; }
+                if (n.nodeValue.length >= restante) { range.setEnd(n, restante); break; }
+                restante -= n.nodeValue.length;
+              }
+              var span = document.createElement('span');
+              span.className = 'rotulo-tabela';
+              span.appendChild(range.extractContents());
+              range.insertNode(span);
+            });
+
+            // 2) Citação no texto: links "Tabela N" ou "Figura N"
+            document.querySelectorAll('a').forEach(function (a) {
+              if (/^(Tabela|Figura)[\s\u00a0]*\d+$/.test(a.textContent.trim())) {
+                a.classList.add('citacao-tabela');
+                a.style.setProperty('color', 'var(--cor-rotulo-tabela, #0a7d4f)', 'important');
+              }
+            });
+
+          });
+          </script>
+
 execute:
-  freeze: auto
+  # ALF lê a planilha ao vivo: freeze desligado para o site sempre refletir os dados atuais.
+  # (No portfólio, "freeze: auto" faz sentido porque os dados são fixos.)
+  freeze: false
   message: false
   warning: false
 
 lang: pt
+
+# Usa a largura toda da tela (é o que deixa o conteúdo flexível no celular e no notebook)
+page-layout: full

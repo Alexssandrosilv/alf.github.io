@@ -1,44 +1,213 @@
 ---
-title: "alf.github.io"
+pagetitle: "ALF"
 ---
 
-This is a Quarto website.
+<div id="fundo-animado-snoopy" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -2;">
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+  <div id="particles-js" style="position: absolute; width: 100%; height: 100%; z-index: -3;"></div>
+
+  <div class="snoop-dance-container"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+<script>
+  particlesJS("particles-js", {
+    "particles": {
+      "number": {
+        "value": 70,           /* QUANTIDADE: Densidade das partículas na tela */
+        "density": { "enable": true, "value_area": 800 }
+      },
+      "color": {
+        "value": "#001d3d"     /* COR: Azul escuro */
+      },
+      "shape": { "type": "circle" }, /* FORMA: Partículas circulares */
+      "opacity": {
+        "value": 0.6,          /* VISIBILIDADE: Transparência das bolinhas */
+        "random": false
+      },
+      "size": {
+        "value": 3,            /* TAMANHO: Diâmetro das bolinhas */
+        "random": true         /* Faz os tamanhos variarem um pouco */
+      },
+      "line_linked": {
+        "enable": false        /* Sem linhas ligando as bolinhas */
+      },
+      "move": {
+        "enable": true,        /* MOVIMENTO: Permite que as bolinhas flutuem */
+        "speed": 1.5,          /* VELOCIDADE: Ritmo constante do fundo */
+        "direction": "none",   /* Direção aleatória */
+        "random": true,        /* Movimento orgânico */
+        "out_mode": "out"      /* Partículas saem por um lado e entram pelo outro */
+      }
+    },
+    "interactivity": {
+      "events": {
+        /* INTERAÇÃO: Desativado para o mouse não interferir no fundo minimalista */
+        "onhover": { "enable": false },
+        "onclick": { "enable": false }
+      }
+    }
+  });
+</script>
+
+<style>
+  /* ==========================================================================
+     --- CONFIGURAÇÃO DO SNOOPY E RODAPÉ ---
+     ========================================================================== */
+
+  /* CONFIGURAÇÃO DO SNOOPY (PC) */
+  .snoop-dance-container {
+    position: fixed;            /* Trava o personagem no ecrã para não desaparecer ao fazer scroll */
+    width: 90px;                /* Define a largura da área onde o GIF vai ficar */
+    height: 90px;               /* Define a altura da área do GIF */
+    background: url('snoopy-dance.gif') no-repeat; /* Carrega a imagem do Snoopy e impede que ela se repita lado a lado */
+    background-size: contain;   /* Garante que o GIF cabe inteiro dentro da caixa, sem ser cortado */
+    bottom: 50px;               /* Distância que o Snoopy fica da parte de baixo do ecrã */
+    right: 20px;                /* Distância que o Snoopy fica da lateral direita do ecrã */
+    z-index: 1;                 /* Camada de profundidade: mantém o Snoopy à frente do fundo de partículas */
+    opacity: 0.9 !important;    /* Deixa o Snoopy com 90% de visibilidade (ligeiramente transparente) */
+    pointer-events: none;       /* Faz o cursor ignorar o Snoopy, permitindo clicar em botões que estejam atrás dele */
+  }
+
+  /* AJUSTE PARA MOBILE (Telemóveis e Tablets) */
+  @media (max-width: 768px) {
+    .snoop-dance-container {
+      display: block !important; /* Força o Snoopy a aparecer, mesmo que o tema tente escondê-lo no telemóvel */
+      width: 70px;               /* Reduz a largura para não ocupar tanto espaço num ecrã pequeno */
+      height: 70px;              /* Reduz a altura na mesma proporção */
+      bottom: 60px;              /* Sobe um pouco o Snoopy para não ficar por cima do menu inferior do telemóvel */
+      right: 15px;               /* Cola um pouco mais o Snoopy à borda direita */
+      z-index: 100;              /* Força o Snoopy a ficar na camada mais alta de todas no telemóvel */
+    }
+  }
+
+  /* RODAPÉ (FOOTER): Fundo preto sólido */
+  .quarto-page-footer {
+    background-color: #000000 !important; /* Muda a cor de fundo do rodapé para preto absoluto */
+    position: relative !important;        /* Necessário para que o z-index funcione corretamente aqui */
+    z-index: 10 !important;               /* Garante que o rodapé fique por cima das partículas voadoras */
+    border-top: none !important;          /* Remove qualquer linha de borda colorida que o tema Quarto coloque por cima do rodapé */
+  }
+
+  /* TEXTO E ÍCONES DO RODAPÉ: Cor Cinza Sóbrio */
+  .nav-footer-left,
+  .nav-footer-center,
+  .nav-footer-right,
+  .quarto-page-footer a,
+  .quarto-page-footer i {
+    color: #888888 !important;   /* Define a cor do texto e dos links no rodapé para um cinzento médio */
+    position: relative !important;
+    z-index: 11 !important;      /* Mantém os textos um nível acima do fundo preto do rodapé */
+    text-decoration: none;       /* Remove o sublinhado dos links no rodapé */
+  }
+
+  /* ==========================================================================
+     --- IDENTIDADE VISUAL MINIMALISTA DO SITE (PRETO E BRANCO) ---
+     ========================================================================== */
+
+  /* 1. Tipografia e Cores Globais (Corpo do site) */
+  body, p, li {
+    font-family: 'Helvetica Neue', Inter, Helvetica, Arial, sans-serif !important; /* Define as fontes do site (modernas e limpas) */
+    color: #333333 !important;   /* Cinzento quase preto (mais confortável para ler que o preto puro) */
+    background-color: transparent !important;  /* Mantém o fundo transparente para que as partículas animadas possam ser vistas */
+  }
+
+  /* 2. Títulos Fortes e Elegantes (h1, h2, etc.) */
+  h1, h2, h3, h4, h5, h6, .quarto-title-text {
+    font-family: 'Helvetica Neue', Inter, Helvetica, Arial, sans-serif !important; /* Usa a mesma fonte moderna para os títulos */
+    color: #000000 !important;   /* Deixa os títulos totalmente pretos para ganharem destaque */
+    font-weight: 700 !important; /* Negrito */
+    letter-spacing: -0.5px !important; /* Junta as letras um bocadinho (efeito premium de design) */
+  }
+
+  /* 3. Links Sutis (Comportamento de qualquer link clicável) */
+  a {
+    color: #000000 !important;   /* Deixa os links pretos (o padrão Quarto costuma ser azul) */
+    text-decoration: none !important; /* Remove o sublinhado padrão dos links */
+    transition: color 0.3s ease !important; /* Faz com que qualquer mudança de cor seja suave (0.3 segundos) */
+  }
+
+  p a {
+    border-bottom: 1px solid #cccccc; /* Linha fina cinzenta por baixo do link no meio do texto */
+  }
+
+  p a:hover {
+    border-bottom: 1px solid #000000; /* Quando passa o rato por cima do link, essa linha fica preta */
+  }
+
+  /* 4. Barra de Navegação Superior (Navbar - Menu do topo) */
+  .navbar {
+    background-color: #ffffff !important; /* Força o menu do topo a ter o fundo totalmente branco */
+    border-bottom: 1px solid #f0f0f0 !important; /* Linha divisória cinzenta ultra clara */
+  }
+
+  /* Botões e Logótipo do menu de topo */
+  .navbar-brand, .nav-link {
+    color: #000000 !important;   /* Força o texto do menu a ser preto */
+    font-weight: 600 !important; /* Letra do menu ligeiramente mais grossa */
+    text-transform: uppercase !important; /* Palavras do menu em MAIÚSCULAS */
+    font-size: 13px !important;  /* Tamanho pequeno e elegante da fonte no menu */
+    letter-spacing: 1px !important; /* Afasta ligeiramente as letras */
+  }
+
+  .nav-link:hover {
+    color: #888888 !important;   /* Quando passa o rato num item do menu, ele fica cinzento */
+  }
+</style>
+
+
+::: {style="text-align: justify"}
+
+:::
+
 
 ```{r}
-# ==============================================================================
-# PROJETO ALF — Ingestão e limpeza básica dos dados via Google Sheets API
-# Autores: Alexssandro Silva e Leticia Haifa
-# ==============================================================================
+#| label: pipeline-alf
+#| echo: false
+#| warning: false
+#| message: false
 
-library(googlesheets4)
-library(dplyr)
+# 1. Bibliotecas
+source("codigos/0_bibliotecas.R", encoding = "UTF-8")
 
-# --- Autenticação (CI usa secret; local usa .Renviron) ---
-if (base::nzchar(base::Sys.getenv("GCP_CREDENTIALS_JSON"))) {
-  base::writeLines(base::Sys.getenv("GCP_CREDENTIALS_JSON"), "credentials_temp.json")
-  googlesheets4::gs4_auth(path = "credentials_temp.json")
-} else {
-  googlesheets4::gs4_auth(path = base::Sys.getenv("GCP_CREDENTIALS"))
-}
+# 2. Autenticação no Google
+source("codigos/1_autenticacao.R", encoding = "UTF-8")
 
-# --- ID da planilha (via secret, nunca hardcoded) ---
-spreadsheet_id <- base::Sys.getenv("SPREADSHEET_ID")
-url_mestre <- base::paste0("https://docs.google.com/spreadsheets/d/", spreadsheet_id, "/edit")
+# 3. Leitura dos dados brutos da planilha
+source("codigos/2_leitura.R", encoding = "UTF-8")
 
-# --- Leitura das abas ---
-entradas_bruto      <- googlesheets4::read_sheet(url_mestre, sheet = "entradas")
-saidas_bruto        <- googlesheets4::read_sheet(url_mestre, sheet = "saidas")
-lista_desejos_bruto <- googlesheets4::read_sheet(url_mestre, sheet = "lista_desejos")
+# 4. Tratamento dos dados
+source("codigos/3_tratamento.R", encoding = "UTF-8")
 
-base::print("[LOG] Ingestão concluída.")
+# 5. Tabela Entradas
+source("codigos/5_tabela_entradas.R", encoding = "UTF-8")
 
-# --- Limpeza básica ---
-entradas      <- entradas_bruto      %>% filter(if_any(everything(), ~ !is.na(.)))
-saidas        <- saidas_bruto        %>% filter(if_any(everything(), ~ !is.na(.)))
-lista_desejos <- lista_desejos_bruto %>% filter(if_any(everything(), ~ !is.na(.)))
-
-print(paste("Registros válidos em 'entradas':", base::nrow(entradas)))
-head(entradas)
+# 6. EXIBIR A TABELA NO SITE
+tabela_final
 ```
+
+
+```{r}
+#| label: tabela-nova
+#| echo: false
+#| warning: false
+#| message: false
+#| eval: false
+
+# DESLIGADO: o arquivo codigos/tabela_nova.R não está no repositório.
+# Quando ele existir em alf.github.io/codigos, troque "eval: false" por "eval: true".
+
+# 7. Carregar e exibir a segunda tabela (A Nova)
+source("codigos/tabela_nova.R", encoding = "UTF-8")
+
+# 8. EXIBIR A TABELA NOVA NO SITE
+tabela_nova
+```
+
+
+::: {style="border-top: 2px solid #003366;"}
+:::
+
+<br>
