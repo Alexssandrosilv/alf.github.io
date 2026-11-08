@@ -187,15 +187,57 @@ estilo_abnt <- htmltools::tags$style("
   
   /* =======================================================================
      <--- NOVO: CELULAR E TABLET (até 768px de largura)
-     Em tela pequena as 6 colunas não cabem lado a lado. Em vez de cortar as
-     colunas da direita (Descrição e Usuário), a tabela mantém uma largura mínima
-     legível e rola para o lado. A pesquisa e a paginação ficam fixas na
-     esquerda, sem rolar junto. No computador nada muda.
+     Em tela pequena, reduz levemente a fonte e o espaçamento interno, impede
+     que as datas quebrem em duas linhas (nowrap), faz apenas a tabela rolar
+     lateralmente e empilha o rodapé de forma centralizada e limpa.
+     No computador nada muda.
      ======================================================================= */
   @media (max-width: 768px) {
-    .dataTables_wrapper { overflow-x: auto !important; overflow-y: hidden !important; }
-    table.dataTable { min-width: 640px !important; }
-    .dataTables_wrapper .top, .dataTables_wrapper .bottom { position: sticky !important; left: 0 !important; }
+    .dataTables_wrapper { overflow-x: hidden !important; }
+    
+    /* Faz apenas a tabela ter rolagem lateral suave e evita que datas quebrem no meio */
+    table.dataTable { 
+      display: block !important;
+      width: 100% !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      font-size: 11.5px !important; 
+      white-space: nowrap !important;
+    }
+    
+    table.dataTable thead th, table.dataTable thead td { 
+      font-size: 12px !important; 
+      padding: 10px 8px 18px 8px !important;
+    }
+    
+    table.dataTable tbody th, table.dataTable tbody td {
+      padding: 8px 10px !important;
+    }
+    
+    /* Centraliza ou alinha a pesquisa de forma limpa no topo */
+    .dataTables_wrapper .top {
+      display: flex !important;
+      justify-content: flex-end !important;
+      width: 100% !important;
+    }
+    
+    /* Empilha os controles de baixo (Info, Mostrar X e Botões) sem quebrar a página */
+    .dataTables_wrapper .bottom { 
+      display: flex !important; 
+      flex-direction: column !important; 
+      align-items: center !important; 
+      justify-content: center !important;
+      gap: 10px !important;
+      padding-top: 15px !important;
+      padding-bottom: 10px !important;
+      width: 100% !important;
+    }
+    
+    .dataTables_info, .dataTables_length, .dataTables_paginate {
+      margin: 0 !important;
+      float: none !important;
+      text-align: center !important;
+    }
   }
 ")
 
@@ -203,28 +245,34 @@ estilo_abnt <- htmltools::tags$style("
 # 3. PREPARAÇÃO DOS DADOS (COM LÓGICA DE ORDENAÇÃO OCULTA)
 bd_entradas_formatado <- dplyr::mutate(
   bd_entradas,
-  # Se a data for NA (vazia), coloca um '-', se não, transforma o dado em texto.
-  data = base::ifelse(base::is.na(data), "-", base::as.character(data)),
   
-  # TRUQUE DE ORDENAÇÃO NUMÉRICA DO VALOR:
-  # Como adicionámos um 'R$' via HTML, a tabela tentaria ordenar tudo alfabeticamente pela letra 'R'.
-  # A solução: Injetamos o valor puro (ex: 000001000.00) invisível (<span display:none>) ANTES do Flexbox visual.
-  # A tabela lê o número escondido e ordena matematicamente da forma correta.
-  valor = base::paste0(
-    "<span style='display: none;'>", base::sprintf("%015.2f", base::as.numeric(valor)), "</span>",
-    "<div style='display: flex; justify-content: space-between; width: 100%; min-width: 75px;'>",
-    "<span>R$</span> <span>", base::format(valor, nsmall = 2, big.mark = ".", decimal.mark = ","), "</span>",
+  # TRUQUE DE ORDENAÇÃO NUMÉRICA DO VALOR + COR #c1121f PARA VALORES SEM DATA:
+  # Avaliamos o valor ANTES de transformar o NA da data em texto.
+  # Se is.na(data) for verdadeiro, aplicamos a cor #c1121f no valor.
+  # O <span display:none> mantém o número puro oculto para a ordenação continuar perfeita.
+  valor = paste0(
+    "<span style='display: none;'>", sprintf("%015.2f", as.numeric(valor)), "</span>",
+    "<div style='display: flex; justify-content: space-between; width: 100%; min-width: 75px;",
+    ifelse(is.na(data), " color: #c1121f; font-weight: 600;", ""), "'>",
+    "<span>R$</span> <span>", format(valor, nsmall = 2, big.mark = ".", decimal.mark = ","), "</span>",
     "</div>"
   ),
   
+  # Se a data for NA (vazia), coloca um '-' também na cor #c1121f, se não, transforma o dado em texto.
+  data = ifelse(
+    is.na(data),
+    "<span style='color: #c1121f; font-weight: 600;'>-</span>",
+    as.character(data)
+  ),
+  
   # LÓGICA DO USUÁRIO: Verifica primeiro se está vazio. Se não estiver, verifica quem é.
-  usuario_id = base::ifelse(
-    base::is.na(usuario_id) | base::trimws(base::as.character(usuario_id)) == "",
+  usuario_id = ifelse(
+    is.na(usuario_id) | trimws(as.character(usuario_id)) == "",
     "<div style='display: flex; justify-content: center; align-items: center; height: 35px; color: #cccccc;'>-</div>",
-    base::ifelse(
-      base::grepl("Leticia", usuario_id, ignore.case = TRUE),
-      base::paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Letícia</span><img src='", uri_leticia, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>"),
-      base::paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
+    ifelse(
+      grepl("Leticia", usuario_id, ignore.case = TRUE),
+      paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Letícia</span><img src='", uri_leticia, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>"),
+      paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
     )
   )
   
@@ -233,16 +281,16 @@ bd_entradas_formatado <- dplyr::mutate(
   # no início da célula. Assim, a tabela consegue ordenar os utilizadores por A-Z e a barra
   # de pesquisa continua a encontrá-los quando escrevemos, mesmo só exibindo a foto.
   
-  # usuario_id = base::ifelse(
-  #   base::grepl("Leticia", usuario_id, ignore.case = TRUE),
-  #   base::paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Letícia</span><img src='", uri_leticia, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>"),
-  #   base::paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
+  # usuario_id = ifelse(
+  #   grepl("Leticia", usuario_id, ignore.case = TRUE),
+  #   paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Letícia</span><img src='", uri_leticia, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>"),
+  #   paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
   # )
 )
 
 # 4. TRADUÇÃO MANUAL DA TABELA
 # O pacote DT gera a tabela em Inglês por defeito. Aqui traduzimos os avisos e botões para PT-PT.
-traducao_pt_pt <- base::list(
+traducao_pt_pt <- list(
   sEmptyTable = "Nenhum registo encontrado",
   sInfo = "A mostrar de _START_ até _END_ de _TOTAL_ registos",
   sInfoEmpty = "A mostrar 0 até 0 de 0 registos",
@@ -252,7 +300,7 @@ traducao_pt_pt <- base::list(
   sProcessing = "A processar...",
   sZeroRecords = "Nenhum registo encontrado",
   sSearch = "<b>Pesquisa:</b>",
-  oPaginate = base::list(
+  oPaginate = list(
     sNext = "Próximo",
     sPrevious = "Anterior",
     sFirst = "Primeiro",
@@ -269,7 +317,7 @@ tabela_dt <- DT::datatable(
   class = 'hover',    # Ativa a classe nativa do DataTables que destaca a linha ao passar o rato
   
   # Injecta o HTML dos ícones do Bootstrap diretamente nos nomes dos cabeçalhos
-  colnames = base::c(
+  colnames = c(
     "<i class='bi bi-calendar-event'></i> Data", 
     "<i class='bi bi-cash-stack'></i> Valor", 
     "<i class='bi bi-briefcase'></i> Fonte Renda", 
@@ -280,7 +328,7 @@ tabela_dt <- DT::datatable(
   
   selection = 'single', # Permite que se clique para selecionar apenas 1 linha de cada vez
   
-  options = base::list(
+  options = list(
     pageLength = 5,     # Mostra apenas 5 registos por página
     autoWidth = FALSE,  # Desliga a largura automática do DT (para respeitar o nosso CSS de max-width 900px)
     scrollX = FALSE,    # Remove a barra de scroll horizontal
@@ -292,12 +340,12 @@ tabela_dt <- DT::datatable(
     # ilp = Info (Mostrar x a y), Length (Menu de 5, 10...) e Pagination na <div class="bottom">
     dom = '<"top"f>rt<"bottom"ilp><"clear">', 
     
-    columnDefs = base::list(
-      base::list(orderable = TRUE, targets = "_all"),                  # Garante que TODAS as colunas podem ser ordenadas clicando no cabeçalho
-      base::list(className = 'dt-head-center', targets = "_all"),      # Centraliza os títulos (Cabeçalho)
-      base::list(className = 'dt-center', targets = base::c(0, 2, 3)), # Centraliza as colunas: Data, Fonte Renda, Frequência
-      base::list(className = 'dt-left', targets = base::c(4, 5)),      # Alinha à esquerda: Descrição, Usuário
-      base::list(width = '90px', targets = 1)                          # Força uma largura fixa para a coluna do Valor (coluna de índice 1)
+    columnDefs = list(
+      list(orderable = TRUE, targets = "_all"),                 # Garante que TODAS as colunas podem ser ordenadas clicando no cabeçalho
+      list(className = 'dt-head-center', targets = "_all"),     # Centraliza os títulos (Cabeçalho)
+      list(className = 'dt-center', targets = c(0, 2, 3)),      # Centraliza as colunas: Data, Fonte Renda, Frequência
+      list(className = 'dt-left', targets = c(4, 5)),           # Alinha à esquerda: Descrição, Usuário
+      list(width = '90px', targets = 1)                         # Força uma largura fixa para a coluna do Valor (coluna de índice 1)
     ),
     language = traducao_pt_pt,
     
@@ -343,3 +391,5 @@ tabela_final <- htmltools::browsable(
     tabela_dt
   )
 )
+
+tabela_final
