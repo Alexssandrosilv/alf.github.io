@@ -184,6 +184,19 @@ estilo_abnt <- htmltools::tags$style("
   .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background: #f9f9f9 !important; border: 1px solid #cccccc !important; }
   .dataTables_wrapper .dataTables_paginate .paginate_button.current, 
   .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { background: #000000 !important; color: #ffffff !important; border: 1px solid #000000 !important; }
+  
+  /* =======================================================================
+     <--- NOVO: CELULAR E TABLET (até 768px de largura)
+     Em tela pequena as 6 colunas não cabem lado a lado. Em vez de cortar as
+     colunas da direita (Descrição e Usuário), a tabela mantém uma largura mínima
+     legível e rola para o lado. A pesquisa e a paginação ficam fixas na
+     esquerda, sem rolar junto. No computador nada muda.
+     ======================================================================= */
+  @media (max-width: 768px) {
+    .dataTables_wrapper { overflow-x: auto !important; overflow-y: hidden !important; }
+    table.dataTable { min-width: 640px !important; }
+    .dataTables_wrapper .top, .dataTables_wrapper .bottom { position: sticky !important; left: 0 !important; }
+  }
 ")
 
 
