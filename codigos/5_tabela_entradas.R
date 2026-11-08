@@ -18,6 +18,17 @@
 uri_alex <- knitr::image_uri(here::here("imagens", "alex_transparente.png"))
 uri_leticia <- knitr::image_uri(here::here("imagens", "leticia_transparente.png"))
 
+# 1.1 DEFINIR O LINK DA PLANILHA DO GOOGLE SHEETS
+# Se você já tiver a variável 'url_mestre' ou 'SPREADSHEET_ID' vinda do 1_autenticacao.R
+# ou 2_leitura.R, ele puxa automaticamente; caso contrário, usa o link direto.
+url_planilha <- if (exists("url_mestre")) {
+  url_mestre
+} else if (Sys.getenv("SPREADSHEET_ID") != "") {
+  paste0("https://docs.google.com/spreadsheets/d/", Sys.getenv("SPREADSHEET_ID"))
+} else {
+  "https://docs.google.com/spreadsheets/d/1UAgVUdYJmIwt0DHRX7mNhkZKpR4nPGyeiUqHirggZ2I/edit"
+}
+
 
 # 2. CSS CUSTOMIZADO DA TABELA
 # Aqui definimos toda a "maquilhagem" da tabela.
@@ -161,16 +172,45 @@ estilo_abnt <- htmltools::tags$style("
   .dataTables_length { margin-right: 20px !important; }
   .dataTables_info { margin-right: auto !important; } /* O 'auto' empurra a paginação toda para o lado direito */
   
-  /* Formatação da Barra de Pesquisa Minimalista */
+  /* Formatação da Barra de Pesquisa Minimalista + Ícone do Google Sheets */
   .dataTables_filter { float: right !important; text-align: right !important; margin-bottom: 15px !important; font-size: 11px !important; }
+  
+  /* Alinha perfeitamente o ícone verde, o texto 'Pesquisa:' e a caixa de texto na mesma linha */
+  .dataTables_filter label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+  
+  /* Estilização do Ícone Verde da Planilha ao lado esquerdo de Pesquisa */
+  .link-planilha {
+    color: #0f9d58 !important; /* Verde oficial do Google Sheets */
+    font-size: 18px !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    margin-right: 2px !important;
+    transition: transform 0.2s ease, color 0.2s ease !important;
+    cursor: pointer !important;
+  }
+  
+  /* Efeito ao passar o rato no ícone da planilha (dá um leve zoom igual às fotos) */
+  .link-planilha:hover {
+    color: #0b8043 !important;
+    transform: scale(1.15) !important;
+  }
+  
   .dataTables_filter input { 
     width: 160px !important; 
-    border: 1px solid #cccccc 
-    !important; border-radius: 4px !important; 
+    border: 1px solid #cccccc !important; 
+    border-radius: 4px !important; 
     padding: 4px 8px !important; 
     background-color: #ffffff !important; 
     outline: none !important; 
-    font-size: 15px !important; }
+    font-size: 15px !important; 
+    margin-left: 2px !important;
+  }
   .dataTables_filter input:focus { 
     border-color: #000000 !important; /* A borda da caixa fica preta ao digitar */ }
   .dataTables_length select { border: 1px solid #cccccc !important; 
@@ -275,21 +315,11 @@ bd_entradas_formatado <- dplyr::mutate(
       paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
     )
   )
-  
-  # TRUQUE DE ORDENAÇÃO E FILTRO ALFABÉTICO DO UTILIZADOR:
-  # O mesmo princípio de cima. O nome real (Letícia ou Alex) é colocado de forma invisível
-  # no início da célula. Assim, a tabela consegue ordenar os utilizadores por A-Z e a barra
-  # de pesquisa continua a encontrá-los quando escrevemos, mesmo só exibindo a foto.
-  
-  # usuario_id = ifelse(
-  #   grepl("Leticia", usuario_id, ignore.case = TRUE),
-  #   paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Letícia</span><img src='", uri_leticia, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>"),
-  #   paste0("<div style='display: flex; justify-content: center;'><span style='display: none;'>Alex</span><img src='", uri_alex, "' style='width: 35px; height: 35px; border-radius: 50%; object-fit: cover;'></div>")
-  # )
 )
 
-# 4. TRADUÇÃO MANUAL DA TABELA
-# O pacote DT gera a tabela em Inglês por defeito. Aqui traduzimos os avisos e botões para PT-PT.
+# 4. TRADUÇÃO MANUAL DA TABELA (COM O ÍCONE DA PLANILHA ANTES DE PESQUISA)
+# O pacote DT gera a tabela em Inglês por defeito. Aqui traduzimos os avisos e botões para PT-PT
+# e injetamos o link com o ícone verde da planilha imediatamente à esquerda de 'Pesquisa:'.
 traducao_pt_pt <- list(
   sEmptyTable = "Nenhum registo encontrado",
   sInfo = "A mostrar de _START_ até _END_ de _TOTAL_ registos",
@@ -299,7 +329,11 @@ traducao_pt_pt <- list(
   sLoadingRecords = "A carregar...",
   sProcessing = "A processar...",
   sZeroRecords = "Nenhum registo encontrado",
-  sSearch = "<b>Pesquisa:</b>",
+  sSearch = paste0(
+    "<a href='", url_planilha, "' target='_blank' title='Abrir planilha no Google Sheets' class='link-planilha' onclick='event.stopPropagation();'>",
+    "<i class='bi bi-file-earmark-spreadsheet-fill'></i></a>",
+    "<b>Pesquisa:</b>"
+  ),
   oPaginate = list(
     sNext = "Próximo",
     sPrevious = "Anterior",
