@@ -219,11 +219,68 @@ estilo_abnt <- htmltools::tags$style("
     background-color: #ffffff !important; 
     outline: none !important; }
   
-  /* Estilização dos Botões de Paginação (1, 2, Próximo, Anterior) */
-  .dataTables_wrapper .dataTables_paginate .paginate_button { color: #000000 !important; border: 1px solid transparent !important; border-radius: 4px !important; }
-  .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background: #f9f9f9 !important; border: 1px solid #cccccc !important; }
+  # /* Estilização dos Botões de Paginação (1, 2, Próximo, Anterior) */
+  # .dataTables_wrapper .dataTables_paginate .paginate_button { color: #000000 !important; border: 1px solid transparent !important; border-radius: 4px !important; }
+  # .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background: #f9f9f9 !important; border: 1px solid #cccccc !important; }
+  # .dataTables_wrapper .dataTables_paginate .paginate_button.current, 
+  # .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { background: #000000 !important; color: #ffffff !important; border: 1px solid #000000 !important; }
+  
+  /* =======================================================================
+     PAGINAÇÃO PRETA E ELEGANTE (1, 2, Próximo, Anterior)
+     ======================================================================= */
+  .dataTables_wrapper .dataTables_paginate {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  /* Estado normal dos botões (fundo transparente, letra escura) */
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #222222 !important;
+    font-weight: 500 !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    padding: 5px 12px !important;
+    margin: 0 2px !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  /* HOVER PRETO BONITO: Ao passar o mouse nos botões clicáveis */
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current):not(.disabled) {
+    background: #000000 !important;
+    background-image: none !important; /* Tira o degradê feio padrão do DT */
+    color: #ffffff !important;          /* Letra branquinha nítida */
+    border: 1px solid #000000 !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px) !important; /* Leve subida elegante */
+  }
+  
+  /* Página atual selecionada (Quadrado preto fixo com letra branca) */
   .dataTables_wrapper .dataTables_paginate .paginate_button.current, 
-  .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { background: #000000 !important; color: #ffffff !important; border: 1px solid #000000 !important; }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #000000 !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Botão desativado (ex: 'Anterior' na pág. 1): Não fica preto ao passar o mouse */
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
+    color: #b5b5b5 !important;
+    background: transparent !important;
+    background-image: none !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    cursor: default !important;
+  }
   
   /* =======================================================================
      <--- NOVO: CELULAR E TABLET (até 768px de largura)

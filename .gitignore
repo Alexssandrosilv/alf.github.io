@@ -1,8 +1,11 @@
-.Rproj.user
-.Rhistory
+# Credenciais e Ambiente Local (CRÍTICO: nunca subir para o Git!)
+/.Renviron
 .RData
+.Rhistory
 .Ruserdata
-.Renviron
+
+# Configurações do RStudio
+.Rproj.user/
 
 # Credenciais temporárias (geradas no CI)
 credentials_temp.json
@@ -11,13 +14,12 @@ credentials_temp.json
 desktop.ini
 Thumbs.db
 
-# Quarto
+# Quarto e Pastas Temporárias
 /.quarto/
 /_site/
+/docs/
+**/*.quarto_ipynb
 
 # Fotos: só as versões usadas no site
 imagens/*
 !imagens/*_transparente.png
-
-# Site gerado localmente (o GitHub publica pela branch gh-pages)
-/docs/

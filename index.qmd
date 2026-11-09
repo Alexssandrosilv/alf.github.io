@@ -1,5 +1,5 @@
 ---
-pagetitle: "ALF"
+pagetitle: "Relatório ALF"
 ---
 
 <div id="fundo-animado-snoopy" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -2;">
@@ -169,6 +169,10 @@ pagetitle: "ALF"
 #| warning: false
 #| message: false
 
+# * **`#| message: false`**: Esconde todas as mensagens de aviso e de desempacotamento/instalação que os pacotes do R geram ao carregar.
+# * **`#| warning: false`**: Oculta alertas secundários do R.
+# * **`#| echo: false`**: Impede que o próprio código apareça na página visualizada (mostrando apenas o resultado final, como a tabela).
+
 # 1. Bibliotecas
 source("codigos/0_bibliotecas.R", encoding = "UTF-8")
 
@@ -180,6 +184,11 @@ source("codigos/2_leitura.R", encoding = "UTF-8")
 
 # 4. Tratamento dos dados
 source("codigos/3_tratamento.R", encoding = "UTF-8")
+
+
+# 5. gráfico fluxo 
+source("codigos/4_grafico_fluxo.R", encoding = "UTF-8")
+
 
 # 5. Tabela Entradas
 source("codigos/5_tabela_entradas.R", encoding = "UTF-8")
