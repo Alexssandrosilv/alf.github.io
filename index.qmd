@@ -189,6 +189,8 @@ source("codigos/3_tratamento.R", encoding = "UTF-8")
 # 5. gráfico fluxo 
 source("codigos/4_grafico_fluxo.R", encoding = "UTF-8")
 
+grafico_fluxo
+
 
 # 5. Tabela Entradas
 source("codigos/5_tabela_entradas.R", encoding = "UTF-8")
@@ -197,23 +199,6 @@ source("codigos/5_tabela_entradas.R", encoding = "UTF-8")
 tabela_final
 ```
 
-
-```{r}
-#| label: tabela-nova
-#| echo: false
-#| warning: false
-#| message: false
-#| eval: false
-
-# DESLIGADO: o arquivo codigos/tabela_nova.R não está no repositório.
-# Quando ele existir em alf.github.io/codigos, troque "eval: false" por "eval: true".
-
-# 7. Carregar e exibir a segunda tabela (A Nova)
-source("codigos/tabela_nova.R", encoding = "UTF-8")
-
-# 8. EXIBIR A TABELA NOVA NO SITE
-tabela_nova
-```
 
 
 ::: {style="border-top: 2px solid #003366;"}
