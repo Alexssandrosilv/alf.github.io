@@ -1,9 +1,10 @@
 # ==============================================================================
 # PROJETO ALF — Gráfico: Fluxo Financeiro (Entradas e Saídas)
 # ==============================================================================
-# Versão final: Responsividade nativa mobile (sem cortes), hover limpo com
-# Fonte/Descrição (Entradas) e Forma de Pagamento/Tipo de Despesa (Saídas),
-# Média/Máx/Mín, linhas finas e seleção interativa por clique na coluna do mês.
+# Cabeçalho do hover no formato: Mês/Ano | R$ Valor (n = X)
+# Descrição sem (n = ), mantendo apenas (%).
+# No Notebook: Hover flutuante original do Plotly.
+# No Mobile: Card responsivo 100% encaixado na largura da tela (nunca corta!).
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -76,25 +77,25 @@ padronizar_usuario <- function(u) {
 entradas_fluxo <- bd_entradas %>%
   dplyr::filter(!base::is.na(data)) %>%
   dplyr::transmute(
-    tipo       = "Entradas",
-    data       = base::as.Date(data),
-    valor      = base::as.numeric(valor),
-    usuario    = padronizar_usuario(usuario_id),
-    grupo_1    = dplyr::coalesce(base::as.character(fonte_renda), "Outras Fontes"),
-    grupo_2    = dplyr::coalesce(base::as.character(descricao), "Sem descrição"),
-    status     = "Recebido"
+    tipo    = "Entradas",
+    data    = base::as.Date(data),
+    valor   = base::as.numeric(valor),
+    usuario = padronizar_usuario(usuario_id),
+    grupo_1 = dplyr::coalesce(base::as.character(fonte_renda), "Outras Fontes"),
+    grupo_2 = dplyr::coalesce(base::as.character(descricao), "Sem descrição"),
+    status  = "Recebido"
   )
 
 saidas_fluxo <- bd_saidas %>%
   dplyr::filter(!base::is.na(data_pagamento)) %>%
   dplyr::transmute(
-    tipo       = "Saídas",
-    data       = base::as.Date(data_pagamento),
-    valor      = base::as.numeric(valor),
-    usuario    = padronizar_usuario(usuario_id),
-    grupo_1    = dplyr::coalesce(base::as.character(forma_pagamento), "Outros"),
-    grupo_2    = dplyr::coalesce(base::as.character(tipo_despesa), "variáveis"),
-    status     = dplyr::coalesce(base::as.character(status), "A pagar")
+    tipo    = "Saídas",
+    data    = base::as.Date(data_pagamento),
+    valor   = base::as.numeric(valor),
+    usuario = padronizar_usuario(usuario_id),
+    grupo_1 = dplyr::coalesce(base::as.character(forma_pagamento), "Outros"),
+    grupo_2 = dplyr::coalesce(base::as.character(tipo_despesa), "variáveis"),
+    status  = dplyr::coalesce(base::as.character(status), "A pagar")
   )
 
 if (!incluir_a_pagar) {
@@ -121,7 +122,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÃO DE HOVER INTELIGENTE (COR DO RÓTULO + N E % + MÉDIA, MÁX E MÍN)
+# 4. FUNÇÃO DE HOVER INTELIGENTE: Mês/Ano | R$ Valor (n = X) e Descrição sem n
 # ==============================================================================
 
 montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
@@ -130,8 +131,8 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
     return(base::paste0(
-      "<b style='color:", cor_titulo, ";'>", titulo_periodo, "</b><br>",
-      "<b>", tipo_sel, ": R$ 0,00</b> (n = 0)"
+      "<b style='color:", cor_titulo, "; font-size:13px;'>", titulo_periodo, "</b>",
+      " <b>| R$ 0,00</b> (n = 0)"
     ))
   }
   
@@ -140,10 +141,10 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   val_max   <- base::max(df_sub$valor, na.rm = TRUE)
   val_min   <- base::min(df_sub$valor, na.rm = TRUE)
   
-  # Cabeçalho com o nome do mês na cor da série
+  # Cabeçalho em linha única: Mês/Ano | R$ Valor (n = X)
   cabecalho <- base::paste0(
-    "<b style='color:", cor_titulo, "; font-size:13px;'>", titulo_periodo, "</b><br>",
-    "<b>", tipo_sel, ": R$ ", formatar_brl(val_total), "</b> (n = ", n_lanc, ")<br>"
+    "<b style='color:", cor_titulo, "; font-size:13px;'>", titulo_periodo, "</b>",
+    " <b>| R$ ", formatar_brl(val_total), "</b> (n = ", n_lanc, ")<br>"
   )
   
   if (tipo_sel == "Saídas") {
@@ -154,7 +155,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
     rotulo_2 <- "Descrição:"
   }
   
-  # Agrupamento 1 (Forma de Pagamento ou Fonte de Renda)
+  # Bloco 1: Forma de Pagamento (Saídas) ou Fonte de Renda (Entradas) -> mantém (n = X | Y%)
   res_1 <- df_sub %>%
     dplyr::group_by(grupo_1) %>%
     dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
@@ -166,7 +167,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
     )
   bloco_1 <- base::paste0("<br><b>", rotulo_1, "</b><br>", base::paste(res_1$linha, collapse = "<br>"))
   
-  # Agrupamento 2 (Tipo de Despesa ou Descrição)
+  # Bloco 2: Tipo de Despesa (com n = ) ou Descrição nas Entradas (SEM n = , apenas %)
   res_2 <- df_sub %>%
     dplyr::group_by(grupo_2) %>%
     dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
@@ -174,7 +175,11 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
     utils::head(5) %>%
     dplyr::mutate(
       pct   = base::round((soma / val_total) * 100, 1),
-      linha = base::paste0("• ", grupo_2, ": R$ ", formatar_brl(soma), " (n = ", qtd, " | ", pct, "%)")
+      linha = if (tipo_sel == "Entradas") {
+        base::paste0("• ", grupo_2, ": R$ ", formatar_brl(soma), " (", pct, "%)")
+      } else {
+        base::paste0("• ", grupo_2, ": R$ ", formatar_brl(soma), " (n = ", qtd, " | ", pct, "%)")
+      }
     )
   bloco_2 <- base::paste0("<br><b>", rotulo_2, "</b><br>", base::paste(res_2$linha, collapse = "<br>"))
   
@@ -284,7 +289,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   dif   <- tot_e - tot_s
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
   
-  # Legenda enxuta sem a palavra "Total"
   nome_e   <- base::paste0("<b>Entradas: R$ ", formatar_brl(tot_e), "</b>")
   nome_s   <- base::paste0("<b>Saídas: R$ ", formatar_brl(tot_s), "</b>")
   nome_dif <- base::paste0("<b>Diferença: ", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
@@ -326,13 +330,337 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM CLIQUE NA BARRA/MÊS)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM CARD DE HOVER PARA MOBILE)
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
 
+js_callback <- base::paste0("
+function(el, x) {
+  const DADOS = ", json_estados, ";
+  const painel = el.closest('.painel-fluxo-alf');
+  if (!painel) return;
+
+  let mesAtual      = 'Todos os Meses';
+  let usuarioAtual  = 'Todos';
+  let modoAtual     = 'barras';
+  let indiceClicado = null;
+  let serieClicada  = 0; // 0 = Entradas, 1 = Saídas
+
+  const selMes        = painel.querySelector('.select-mes-alf');
+  const botoesUsuario = painel.querySelectorAll('.btn-usuario-alf');
+  const botoesModo    = painel.querySelectorAll('.btn-modo-alf');
+  const legEntradas   = painel.querySelector('.leg-texto-entradas');
+  const legSaidas     = painel.querySelector('.leg-texto-saidas');
+  const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
+  const quadDiferenca = painel.querySelector('.quadrado-diferenca');
+  const cardMobile    = painel.querySelector('.card-hover-mobile-alf');
+
+  function formatarMoedaJS(v) {
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function atualizarCardMobile(d, isMobile) {
+    if (!cardMobile) return;
+    if (!isMobile || indiceClicado === null || !d.x || indiceClicado >= d.x.length) {
+      cardMobile.style.display = 'none';
+      cardMobile.innerHTML = '';
+      return;
+    }
+    const htmlE = d.e_hover[indiceClicado] || '';
+    const htmlS = d.s_hover[indiceClicado] || '';
+    // Mostra tanto a série clicada em destaque quanto o botão para alternar Entradas/Saídas no card mobile
+    const htmlAtivo = (serieClicada === 1) ? htmlS : htmlE;
+    cardMobile.innerHTML =
+      '<div class=\"topo-card-mobile-alf\">' +
+        '<div class=\"abas-card-mobile-alf\">' +
+          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 0 ? 'ativa-e' : '') + '\" data-serie=\"0\">Entradas</button>' +
+          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 1 ? 'ativa-s' : '') + '\" data-serie=\"1\">Saídas</button>' +
+        '</div>' +
+        '<button type=\"button\" class=\"fechar-card-mobile-alf\" title=\"Fechar\">&times;</button>' +
+      '</div>' +
+      '<div class=\"corpo-card-mobile-alf\">' + htmlAtivo + '</div>';
+    cardMobile.style.display = 'block';
+
+    cardMobile.querySelectorAll('.aba-mob-alf').forEach(function(btnAba) {
+      btnAba.addEventListener('click', function() {
+        serieClicada = parseInt(this.getAttribute('data-serie'), 10);
+        atualizarCardMobile(d, isMobile);
+      });
+    });
+
+    const btnFechar = cardMobile.querySelector('.fechar-card-mobile-alf');
+    if (btnFechar) {
+      btnFechar.addEventListener('click', function() {
+        indiceClicado = null;
+        atualizarGrafico();
+      });
+    }
+  }
+
+  function atualizarRotulosTopo(d) {
+    if (indiceClicado !== null && d.x && indiceClicado < d.x.length) {
+      const valE  = d.e_y[indiceClicado] || 0;
+      const valS  = d.s_y[indiceClicado] || 0;
+      const dif   = valE - valS;
+      const sinal = dif > 0 ? '+' : (dif < 0 ? '-' : '');
+      const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
+      const rotX  = String(d.x[indiceClicado] || '').replace(/<[^>]*>/g, '');
+
+      if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
+      if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
+      if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+      if (quadDiferenca) quadDiferenca.style.background = corD;
+    } else {
+      const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
+      const nomeS   = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
+      const nomeDif = Array.isArray(d.dif_nome) ? d.dif_nome[0] : d.dif_nome;
+      const corDif  = Array.isArray(d.dif_cor)  ? d.dif_cor[0]  : d.dif_cor;
+
+      if (legEntradas)  legEntradas.innerHTML  = nomeE;
+      if (legSaidas)    legSaidas.innerHTML    = nomeS;
+      if (legDiferenca) legDiferenca.innerHTML = nomeDif;
+      if (quadDiferenca) quadDiferenca.style.background = corDif;
+    }
+  }
+
+  function atualizarGrafico() {
+    const d = DADOS[mesAtual] && DADOS[mesAtual][usuarioAtual];
+    if (!d) return;
+
+    const isMobile  = window.innerWidth <= 768;
+    const ehBarra   = (modoAtual === 'barras');
+    const qtdPontos = d.x ? d.x.length : 1;
+
+    const maxBar    = Array.isArray(d.max_bar)  ? d.max_bar[0]  : d.max_bar;
+    const maxLine   = Array.isArray(d.max_line) ? d.max_line[0] : d.max_line;
+    const maxY      = ehBarra ? maxBar : maxLine;
+
+    atualizarRotulosTopo(d);
+    atualizarCardMobile(d, isMobile);
+
+    const tamRotulo = isMobile ? 8.5 : ", tamanho_rotulos, ";
+    const tamEixoX  = isMobile ? (qtdPontos > 6 ? 8.5 : 10) : ", tamanho_eixo_x, ";
+    const tamEixoY  = isMobile ? 9 : 11;
+    const alturaAtu = isMobile ? ", altura_grafico_mobile, " : ", altura_grafico, ";
+    const raioAtu   = isMobile ? 5 : ", raio_cantos, ";
+
+    const opacidadeArr = [];
+    const bordaLargArr = [];
+    const bordaCorArr  = [];
+
+    for (let i = 0; i < qtdPontos; i++) {
+      if (indiceClicado === null) {
+        opacidadeArr.push(1);
+        bordaLargArr.push(0);
+        bordaCorArr.push('rgba(0,0,0,0)');
+      } else if (i === indiceClicado) {
+        opacidadeArr.push(1);
+        bordaLargArr.push(2.2);
+        bordaCorArr.push('#03045e');
+      } else {
+        opacidadeArr.push(0.32);
+        bordaLargArr.push(0);
+        bordaCorArr.push('rgba(0,0,0,0)');
+      }
+    }
+
+    const posLinhasE = [];
+    const posLinhasS = [];
+    const txtLinhasE = [];
+    const txtLinhasS = [];
+
+    for (let i = 0; i < qtdPontos; i++) {
+      const valE = d.e_y[i] || 0;
+      const valS = d.s_y[i] || 0;
+      const rawE = d.e_txt_line[i] || '';
+      const rawS = d.s_txt_line[i] || '';
+
+      if (valE >= valS) {
+        posLinhasE.push('top center');
+        txtLinhasE.push(rawE ? (rawE + '<br> ') : '');
+        if (valS > 0 && Math.abs(valE - valS) < (maxLine * 0.14)) {
+          posLinhasS.push('bottom center');
+          txtLinhasS.push(rawS ? (' <br>' + rawS) : '');
+        } else {
+          posLinhasS.push('top center');
+          txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
+        }
+      } else {
+        posLinhasS.push('top center');
+        txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
+        if (valE > 0 && Math.abs(valS - valE) < (maxLine * 0.14)) {
+          posLinhasE.push('bottom center');
+          txtLinhasE.push(rawE ? (' <br>' + rawE) : '');
+        } else {
+          posLinhasE.push('top center');
+          txtLinhasE.push(rawE ? (rawE + '<br> ') : '');
+        }
+      }
+    }
+
+    const ocultarTxtMobile = (isMobile && qtdPontos > 10);
+
+    // No Notebook: usa o hover flutuante perfeito. No Mobile: desativa o balão que corta e abre o Card Mobile!
+    const traceEntradas = {
+      x: d.x,
+      y: d.e_y,
+      type: ehBarra ? 'bar' : 'scatter',
+      mode: ehBarra ? undefined : 'lines+markers+text',
+      marker: ehBarra
+        ? { color: '", cor_entradas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
+        : { color: '", cor_entradas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
+      line: { color: '", cor_entradas, "', width: isMobile ? 1.5 : 1.8 },
+      text: ocultarTxtMobile ? d.e_y.map(function() { return ''; }) : (ehBarra ? d.e_txt_bar : txtLinhasE),
+      textposition: ehBarra ? 'inside' : posLinhasE,
+      insidetextanchor: 'middle',
+      insidetextorientation: 'horizontal',
+      constraintext: 'none',
+      cliponaxis: false,
+      textfont: {
+        family: 'Inter, sans-serif',
+        size: tamRotulo,
+        color: ehBarra ? '#ffffff' : '", cor_entradas, "'
+      },
+      hoverinfo: isMobile ? 'none' : 'text',
+      hovertext: d.e_hover
+    };
+
+    const traceSaidas = {
+      x: d.x,
+      y: d.s_y,
+      type: ehBarra ? 'bar' : 'scatter',
+      mode: ehBarra ? undefined : 'lines+markers+text',
+      marker: ehBarra
+        ? { color: '", cor_saidas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
+        : { color: '", cor_saidas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
+      line: { color: '", cor_saidas, "', width: isMobile ? 1.5 : 1.8 },
+      text: ocultarTxtMobile ? d.s_y.map(function() { return ''; }) : (ehBarra ? d.s_txt_bar : txtLinhasS),
+      textposition: ehBarra ? 'outside' : posLinhasS,
+      constraintext: 'none',
+      cliponaxis: false,
+      textfont: {
+        family: 'Inter, sans-serif',
+        size: tamRotulo,
+        color: ehBarra ? '#000000' : '", cor_saidas, "'
+      },
+      hoverinfo: isMobile ? 'none' : 'text',
+      hovertext: d.s_hover
+    };
+
+    const minY = ehBarra ? 0 : -(maxLine * 0.08);
+    const larguraContainer = painel.clientWidth || window.innerWidth;
+
+    const novoLayout = Object.assign({}, el.layout, {
+      width: larguraContainer,
+      height: alturaAtu,
+      barmode: 'stack',
+      barcornerradius: raioAtu,
+      bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.32),
+      uniformtext: { mode: 'show', minsize: tamRotulo },
+      hovermode: isMobile ? false : 'closest',
+      hoverlabel: {
+        bgcolor: '", hover_bg_cor, "',
+        bordercolor: '", borda_balao_hover, "',
+        align: 'left',
+        font: {
+          family: 'Inter, sans-serif',
+          size: ", hover_fonte_tam, ",
+          color: '", hover_txt_cor, "'
+        }
+      },
+      margin: isMobile
+        ? { t: 22, b: qtdPontos > 8 ? 38 : 30, l: 44, r: 10 }
+        : { t: 28, b: 42, l: 62, r: 12 },
+      xaxis: Object.assign({}, el.layout.xaxis, {
+        type: 'category',
+        categoryorder: 'array',
+        categoryarray: d.x,
+        tickangle: (isMobile && qtdPontos > 8) ? -45 : 0,
+        tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
+      }),
+      yaxis: Object.assign({}, el.layout.yaxis, {
+        range: [minY, maxY],
+        tickfont: { family: 'Inter, sans-serif', size: tamEixoY, color: '#444444' }
+      })
+    });
+
+    el.style.width  = '100%';
+    el.style.height = alturaAtu + 'px';
+    Plotly.react(el, [traceEntradas, traceSaidas], novoLayout, {displayModeBar: false, responsive: true});
+  }
+
+  el.on('plotly_click', function(data) {
+    if (!data || !data.points || !data.points.length) return;
+    const pt  = data.points[0];
+    const idx = pt.pointIndex;
+    const crv = pt.curveNumber || 0;
+
+    if (indiceClicado === idx && serieClicada === crv) {
+      indiceClicado = null;
+    } else {
+      indiceClicado = idx;
+      serieClicada  = crv;
+    }
+    atualizarGrafico();
+  });
+
+  el.addEventListener('click', function(ev) {
+    const tickNode = ev.target.closest('.xtick');
+    if (!tickNode) return;
+    const todosTicks = Array.from(el.querySelectorAll('.xtick'));
+    const idx = todosTicks.indexOf(tickNode);
+    if (idx !== -1) {
+      indiceClicado = (indiceClicado === idx) ? null : idx;
+      atualizarGrafico();
+    }
+  });
+
+  if (selMes) {
+    selMes.addEventListener('change', function() {
+      mesAtual = this.value;
+      indiceClicado = null;
+      atualizarGrafico();
+    });
+  }
+
+  botoesUsuario.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const clicado = this.getAttribute('data-usuario');
+      if (usuarioAtual === clicado && clicado !== 'Todos') {
+        usuarioAtual = 'Todos';
+      } else {
+        usuarioAtual = clicado;
+      }
+      indiceClicado = null;
+      botoesUsuario.forEach(function(b) {
+        b.classList.toggle('ativo', b.getAttribute('data-usuario') === usuarioAtual);
+      });
+      atualizarGrafico();
+    });
+  });
+
+  botoesModo.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modoAtual = this.getAttribute('data-modo');
+      botoesModo.forEach(function(b) { b.classList.remove('ativo'); });
+      this.classList.add('ativo');
+      atualizarGrafico();
+    });
+  });
+
+  atualizarGrafico();
+  setTimeout(atualizarGrafico, 120);
+
+  let timerResize;
+  window.addEventListener('resize', function() {
+    clearTimeout(timerResize);
+    timerResize = setTimeout(atualizarGrafico, 120);
+  });
+}
+")
+
 grafico <- plotly::plot_ly(height = altura_grafico) %>%
-  # Série 0: Entradas
   plotly::add_bars(
     x                     = estado_ini$x,
     y                     = estado_ini$e_y,
@@ -348,7 +676,6 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
     hoverinfo             = "text",
     hovertext             = estado_ini$e_hover
   ) %>%
-  # Série 1: Saídas
   plotly::add_bars(
     x                     = estado_ini$x,
     y                     = estado_ini$s_y,
@@ -408,285 +735,11 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
     paper_bgcolor = "white"
   ) %>%
   plotly::config(displayModeBar = FALSE, responsive = TRUE) %>%
-  htmlwidgets::onRender(base::paste0("
-    function(el, x) {
-      const DADOS = ", json_estados, ";
-      const painel = el.closest('.painel-fluxo-alf');
-      if (!painel) return;
-
-      let mesAtual     = 'Todos os Meses';
-      let usuarioAtual = 'Todos';
-      let modoAtual    = 'barras';
-      let indiceClicado = null; // Índice da coluna selecionada no gráfico
-
-      const selMes        = painel.querySelector('.select-mes-alf');
-      const botoesUsuario = painel.querySelectorAll('.btn-usuario-alf');
-      const botoesModo    = painel.querySelectorAll('.btn-modo-alf');
-      const legEntradas   = painel.querySelector('.leg-texto-entradas');
-      const legSaidas     = painel.querySelector('.leg-texto-saidas');
-      const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
-      const quadDiferenca = painel.querySelector('.quadrado-diferenca');
-
-      function formatarMoedaJS(v) {
-        return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      }
-
-      function atualizarRotulosTopo(d) {
-        if (indiceClicado !== null && d.x && indiceClicado < d.x.length) {
-          const valE  = d.e_y[indiceClicado] || 0;
-          const valS  = d.s_y[indiceClicado] || 0;
-          const dif   = valE - valS;
-          const sinal = dif > 0 ? '+' : (dif < 0 ? '-' : '');
-          const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
-          const rotX  = (d.x[indiceClicado] || '').replace(/<[^>]*>/g, '');
-
-          if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
-          if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
-          if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
-          if (quadDiferenca) quadDiferenca.style.background = corD;
-        } else {
-          const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
-          const nomeS   = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
-          const nomeDif = Array.isArray(d.dif_nome) ? d.dif_nome[0] : d.dif_nome;
-          const corDif  = Array.isArray(d.dif_cor)  ? d.dif_cor[0]  : d.dif_cor;
-
-          if (legEntradas)  legEntradas.innerHTML  = nomeE;
-          if (legSaidas)    legSaidas.innerHTML    = nomeS;
-          if (legDiferenca) legDiferenca.innerHTML = nomeDif;
-          if (quadDiferenca) quadDiferenca.style.background = corDif;
-        }
-      }
-
-      function atualizarGrafico() {
-        const d = DADOS[mesAtual] && DADOS[mesAtual][usuarioAtual];
-        if (!d) return;
-
-        const isMobile  = window.innerWidth <= 768;
-        const ehBarra   = (modoAtual === 'barras');
-        const qtdPontos = d.x ? d.x.length : 1;
-
-        const maxBar    = Array.isArray(d.max_bar)  ? d.max_bar[0]  : d.max_bar;
-        const maxLine   = Array.isArray(d.max_line) ? d.max_line[0] : d.max_line;
-        const maxY      = ehBarra ? maxBar : maxLine;
-
-        atualizarRotulosTopo(d);
-
-        const tamRotulo = isMobile ? 8.5 : ", tamanho_rotulos, ";
-        const tamEixoX  = isMobile ? (qtdPontos > 6 ? 8.5 : 10) : ", tamanho_eixo_x, ";
-        const tamEixoY  = isMobile ? 9 : 11;
-        const alturaAtu = isMobile ? ", altura_grafico_mobile, " : ", altura_grafico, ";
-        const raioAtu   = isMobile ? 5 : ", raio_cantos, ";
-
-        // Efeito visual de destaque suave quando uma coluna/mês está selecionada
-        const opacidadeArr = [];
-        const bordaLargArr = [];
-        const bordaCorArr  = [];
-        const eixoXFormatado = [];
-
-        for (let i = 0; i < qtdPontos; i++) {
-          if (indiceClicado === null) {
-            opacidadeArr.push(1);
-            bordaLargArr.push(0);
-            bordaCorArr.push('rgba(0,0,0,0)');
-            eixoXFormatado.push(d.x[i]);
-          } else if (i === indiceClicado) {
-            opacidadeArr.push(1);
-            bordaLargArr.push(2); // Borda suave na coluna clicada
-            bordaCorArr.push('#03045e');
-            eixoXFormatado.push('<span style=\"color:#03045e; text-decoration:underline;\">' + d.x[i] + '</span>');
-          } else {
-            opacidadeArr.push(0.32); // Esmaece suavemente as outras colunas
-            bordaLargArr.push(0);
-            bordaCorArr.push('rgba(0,0,0,0)');
-            eixoXFormatado.push(d.x[i]);
-          }
-        }
-
-        // Posicionamento limpo dos rótulos no modo Linhas
-        const posLinhasE = [];
-        const posLinhasS = [];
-        const txtLinhasE = [];
-        const txtLinhasS = [];
-
-        for (let i = 0; i < qtdPontos; i++) {
-          const valE = d.e_y[i] || 0;
-          const valS = d.s_y[i] || 0;
-          const rawE = d.e_txt_line[i] || '';
-          const rawS = d.s_txt_line[i] || '';
-
-          if (valE >= valS) {
-            posLinhasE.push('top center');
-            txtLinhasE.push(rawE ? (rawE + '<br> ') : '');
-            if (valS > 0 && Math.abs(valE - valS) < (maxLine * 0.14)) {
-              posLinhasS.push('bottom center');
-              txtLinhasS.push(rawS ? (' <br>' + rawS) : '');
-            } else {
-              posLinhasS.push('top center');
-              txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
-            }
-          } else {
-            posLinhasS.push('top center');
-            txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
-            if (valE > 0 && Math.abs(valS - valE) < (maxLine * 0.14)) {
-              posLinhasE.push('bottom center');
-              txtLinhasE.push(rawE ? (' <br>' + rawE) : '');
-            } else {
-              posLinhasE.push('top center');
-              txtLinhasE.push(rawE ? (rawE + '<br> ') : '');
-            }
-          }
-        }
-
-        const ocultarTxtMobile = (isMobile && qtdPontos > 10);
-
-        const traceEntradas = {
-          x: eixoXFormatado,
-          y: d.e_y,
-          type: ehBarra ? 'bar' : 'scatter',
-          mode: ehBarra ? undefined : 'lines+markers+text',
-          marker: ehBarra
-            ? { color: '", cor_entradas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
-            : { color: '", cor_entradas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
-          line: { color: '", cor_entradas, "', width: isMobile ? 1.5 : 1.8 }, // Linha mais fina e elegante
-          text: ocultarTxtMobile ? d.e_y.map(function() { return ''; }) : (ehBarra ? d.e_txt_bar : txtLinhasE),
-          textposition: ehBarra ? 'inside' : posLinhasE,
-          insidetextanchor: 'middle',
-          insidetextorientation: 'horizontal',
-          constraintext: 'none',
-          cliponaxis: false,
-          textfont: {
-            family: 'Inter, sans-serif',
-            size: tamRotulo,
-            color: ehBarra ? '#ffffff' : '", cor_entradas, "'
-          },
-          hoverinfo: 'text',
-          hovertext: d.e_hover
-        };
-
-        const traceSaidas = {
-          x: eixoXFormatado,
-          y: d.s_y,
-          type: ehBarra ? 'bar' : 'scatter',
-          mode: ehBarra ? undefined : 'lines+markers+text',
-          marker: ehBarra
-            ? { color: '", cor_saidas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
-            : { color: '", cor_saidas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
-          line: { color: '", cor_saidas, "', width: isMobile ? 1.5 : 1.8 }, // Linha mais fina e elegante
-          text: ocultarTxtMobile ? d.s_y.map(function() { return ''; }) : (ehBarra ? d.s_txt_bar : txtLinhasS),
-          textposition: ehBarra ? 'outside' : posLinhasS,
-          constraintext: 'none',
-          cliponaxis: false,
-          textfont: {
-            family: 'Inter, sans-serif',
-            size: tamRotulo,
-            color: ehBarra ? '#000000' : '", cor_saidas, "'
-          },
-          hoverinfo: 'text',
-          hovertext: d.s.hover
-        };
-
-        const minY = ehBarra ? 0 : -(maxLine * 0.08);
-        const larguraContainer = painel.clientWidth || window.innerWidth;
-
-        const novoLayout = Object.assign({}, el.layout, {
-          width: larguraContainer,
-          height: alturaAtu,
-          barmode: 'stack',
-          barcornerradius: raioAtu,
-          bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.32),
-          uniformtext: { mode: 'show', minsize: tamRotulo },
-          margin: isMobile
-            ? { t: 22, b: qtdPontos > 8 ? 38 : 30, l: 44, r: 8 }
-            : { t: 28, b: 42, l: 62, r: 12 },
-          xaxis: Object.assign({}, el.layout.xaxis, {
-            type: 'category',
-            categoryorder: 'array',
-            categoryarray: eixoXFormatado,
-            tickangle: (isMobile && qtdPontos > 8) ? -45 : 0,
-            tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
-          }),
-          yaxis: Object.assign({}, el.layout.yaxis, {
-            range: [minY, maxY],
-            tickfont: { family: 'Inter, sans-serif', size: tamEixoY, color: '#444444' }
-          })
-        });
-
-        el.style.width  = '100%';
-        el.style.height = alturaAtu + 'px';
-        Plotly.react(el, [traceEntradas, traceSaidas], novoLayout, {displayModeBar: false, responsive: true});
-      }
-
-      // Evento de clique na barra/ponto para destacar a coluna e mostrar apenas as informações daquele mês/dia
-      el.on('plotly_click', function(data) {
-        if (!data || !data.points || !data.points.length) return;
-        const idx = data.points[0].pointIndex;
-        if (indiceClicado === idx) {
-          indiceClicado = null; // Desmarca se clicar de novo
-        } else {
-          indiceClicado = idx;
-        }
-        atualizarGrafico();
-      });
-
-      // Permite clicar também direto no nome do mês no eixo X (ex: 'Agosto', 'Setembro')
-      el.addEventListener('click', function(ev) {
-        const tickNode = ev.target.closest('.xtick');
-        if (!tickNode) return;
-        const todosTicks = Array.from(el.querySelectorAll('.xtick'));
-        const idx = todosTicks.indexOf(tickNode);
-        if (idx !== -1) {
-          indiceClicado = (indiceClicado === idx) ? null : idx;
-          atualizarGrafico();
-        }
-      });
-
-      atualizarGrafico();
-      setTimeout(atualizarGrafico, 100);
-
-      let timerResize;
-      window.addEventListener('resize', function() {
-        clearTimeout(timerResize);
-        timerResize = setTimeout(atualizarGrafico, 120);
-      });
-
-      if (selMes) {
-        selMes.addEventListener('change', function() {
-          mesAtual = this.value;
-          indiceClicado = null;
-          atualizarGrafico();
-        });
-      }
-
-      botoesUsuario.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          const clicado = this.getAttribute('data-usuario');
-          if (usuarioAtual === clicado && clicado !== 'Todos') {
-            usuarioAtual = 'Todos';
-          } else {
-            usuarioAtual = clicado;
-          }
-          indiceClicado = null;
-          botoesUsuario.forEach(function(b) {
-            b.classList.toggle('ativo', b.getAttribute('data-usuario') === usuarioAtual);
-          });
-          atualizarGrafico();
-        });
-      });
-
-      botoesModo.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          modoAtual = this.getAttribute('data-modo');
-          botoesModo.forEach(function(b) { b.classList.remove('ativo'); });
-          this.classList.add('ativo');
-          atualizarGrafico();
-        });
-      });
-    }
-  "))
+  htmlwidgets::onRender(js_callback)
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (CORREÇÃO TOTAL DE LARGURA NO MOBILE)
+# 8. ESTILO CSS E ESTRUTURA HTML (COM CARD DE HOVER PARA CELULAR)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -697,9 +750,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: #ffffff;
     box-sizing: border-box;
-    overflow: hidden;
   }
-  /* Sobrescreve qualquer min-width global do s8.css que cortava o gráfico no celular */
   .painel-fluxo-alf .grafico-scroll,
   .painel-fluxo-alf .html-widget,
   .painel-fluxo-alf .plotly,
@@ -709,7 +760,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     box-sizing: border-box !important;
   }
   .painel-fluxo-alf .xtick,
@@ -872,6 +923,67 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   }
 
+  /* Card de Hover Mobile (100% dentro da tela, sem nunca cortar) */
+  .card-hover-mobile-alf {
+    display: none;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1.5px solid #000000;
+    border-radius: 8px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: #000000;
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .topo-card-mobile-alf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eaeaea;
+  }
+  .abas-card-mobile-alf {
+    display: inline-flex;
+    gap: 6px;
+  }
+  .aba-mob-alf {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid #cccccc;
+    background: #f8f9fa;
+    color: #333333;
+    cursor: pointer;
+  }
+  .aba-mob-alf.ativa-e {
+    background: ", cor_entradas, ";
+    border-color: ", cor_entradas, ";
+    color: #ffffff;
+  }
+  .aba-mob-alf.ativa-s {
+    background: ", cor_saidas, ";
+    border-color: ", cor_saidas, ";
+    color: #ffffff;
+  }
+  .fechar-card-mobile-alf {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: #555555;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+
   /* =========================================================
      AJUSTES EXCLUSIVOS PARA CELULAR (MOBILE <= 768px)
      ========================================================= */
@@ -999,7 +1111,6 @@ controles_html <- htmltools::tags$div(
   )
 )
 
-# Cabeçalho sem subtítulo e com os 3 Rótulos enxutos: Saídas, Entradas e Diferença
 cabecalho_html <- htmltools::tags$div(
   class = "cabecalho-grafico-alf",
   htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome),
@@ -1033,7 +1144,9 @@ grafico_fluxo <- htmltools::tagList(
     class = "painel-fluxo-alf",
     controles_html,
     cabecalho_html,
-    htmltools::tags$div(class = "grafico-scroll", grafico)
+    htmltools::tags$div(class = "grafico-scroll", grafico),
+    htmltools::tags$div(class = "card-hover-mobile-alf")
   )
 )
+
 grafico_fluxo
