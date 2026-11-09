@@ -10,15 +10,28 @@
 # Credenciais temporárias (geradas no CI)
 credentials_temp.json
 
-# Windows
-desktop.ini
-Thumbs.db
+# Windows (em qualquer subpasta)
+**/desktop.ini
+**/Thumbs.db
 
-# Quarto e Pastas Temporárias
+# Quarto, HTMLs locais e Pastas Temporárias
 /.quarto/
+/_freeze/
 /_site/
 /docs/
+/index_files/
+/about_files/
+index.html
+about.html
 **/*.quarto_ipynb
+
+# Biblioteca pesada do renv (NUNCA subir os pacotes instalados localmente!)
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/staging/
 
 # Fotos: só as versões usadas no site
 imagens/*
