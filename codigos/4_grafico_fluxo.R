@@ -1,27 +1,21 @@
 # ==============================================================================
-# PROJETO ALF — Gráfico: Fluxo de Entradas e Saídas (Mensal e Diário)
+# PROJETO ALF — Gráfico: Fluxo Financeiro (Entradas e Saídas)
 # ==============================================================================
-# Controles HTML customizados com fotos redondas (Alex / Letícia),
-# cabeçalho 100% alinhado à esquerda, 3º rótulo de Diferença (Entradas - Saídas),
-# eixo X diário enxuto (apenas dias com movimento), rótulos com tamanho fixo
-# padronizado e hover analítico com (n = ...) por Tipo de Despesa e Forma de Pagamento.
+# Versão final: Responsividade nativa mobile (sem cortes), hover limpo com
+# Fonte/Descrição (Entradas) e Forma de Pagamento/Tipo de Despesa (Saídas),
+# Média/Máx/Mín, linhas finas e seleção interativa por clique na coluna do mês.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
 # ==============================================================================
 
-titulo_nome     <- "Fluxo Financeiro: Entradas e Saídas"
-subtitulo_texto <- "Visão consolidada mensal e detalhamento diário (saídas pela data de pagamento)"
-
+titulo_nome     <- "Fluxo Financeiro: Entradas e Saídas (por data de pagamento)"
 titulo_cor      <- "#03045e"
 titulo_tamanho  <- 16
-sub_cor         <- "#555555"
-sub_tamanho     <- 13
 
-# Cores das séries (Paleta Azul/Ciano do Modelo)
+# Cores das séries
 cor_entradas    <- "#29b6d8"   # Azul Ciano Vibrante (Base)
 cor_saidas      <- "#1b78a1"   # Azul Oceano Escuro (Topo)
-cor_diferenca   <- "#03045e"   # Azul Marinho Profundo (3º Rótulo: Diferença)
 
 tamanho_rotulos <- 10.5
 cor_rotulos     <- "#000000"
@@ -29,18 +23,17 @@ tamanho_eixo_x  <- 11
 cor_eixo_x      <- "#000000"
 tamanho_legenda <- 12.5
 
-# Balão de Hover (Fundo branco e borda preta padrão ABNT/Alex)
+# Balão de Hover
 hover_bg_cor      <- "#FFFFFF"
 hover_txt_cor     <- "#000000"
 hover_fonte_tam   <- 12
 borda_balao_hover <- "#000000"
 
 raio_cantos           <- 8
-altura_grafico        <- 460 # Altura no Notebook/PC
-altura_grafico_mobile <- 310 # Altura reduzida e proporcional no Celular
+altura_grafico        <- 440 # Altura no Notebook/PC
+altura_grafico_mobile <- 275 # Altura compacta no Celular
 
-incluir_a_pagar    <- TRUE
-descricao_no_hover <- FALSE
+incluir_a_pagar <- TRUE
 
 
 # ==============================================================================
@@ -83,29 +76,25 @@ padronizar_usuario <- function(u) {
 entradas_fluxo <- bd_entradas %>%
   dplyr::filter(!base::is.na(data)) %>%
   dplyr::transmute(
-    tipo            = "Entradas",
-    data            = base::as.Date(data),
-    valor           = base::as.numeric(valor),
-    usuario         = padronizar_usuario(usuario_id),
-    fonte_ou_tipo   = dplyr::coalesce(base::as.character(fonte_renda), "Outras Fontes"),
-    forma_pagamento = dplyr::coalesce(base::as.character(frequencia_recebimento), "Única"),
-    item_consumo    = dplyr::coalesce(base::as.character(fonte_renda), "Entrada"),
-    descricao       = base::as.character(descricao),
-    status          = "Recebido"
+    tipo       = "Entradas",
+    data       = base::as.Date(data),
+    valor      = base::as.numeric(valor),
+    usuario    = padronizar_usuario(usuario_id),
+    grupo_1    = dplyr::coalesce(base::as.character(fonte_renda), "Outras Fontes"),
+    grupo_2    = dplyr::coalesce(base::as.character(descricao), "Sem descrição"),
+    status     = "Recebido"
   )
 
 saidas_fluxo <- bd_saidas %>%
   dplyr::filter(!base::is.na(data_pagamento)) %>%
   dplyr::transmute(
-    tipo            = "Saídas",
-    data            = base::as.Date(data_pagamento),
-    valor           = base::as.numeric(valor),
-    usuario         = padronizar_usuario(usuario_id),
-    fonte_ou_tipo   = dplyr::coalesce(base::as.character(tipo_despesa), "variáveis"),
-    forma_pagamento = dplyr::coalesce(base::as.character(forma_pagamento), "Outros"),
-    item_consumo    = dplyr::coalesce(base::as.character(item_consumo), "Outros"),
-    descricao       = base::as.character(descricao),
-    status          = dplyr::coalesce(base::as.character(status), "A pagar")
+    tipo       = "Saídas",
+    data       = base::as.Date(data_pagamento),
+    valor      = base::as.numeric(valor),
+    usuario    = padronizar_usuario(usuario_id),
+    grupo_1    = dplyr::coalesce(base::as.character(forma_pagamento), "Outros"),
+    grupo_2    = dplyr::coalesce(base::as.character(tipo_despesa), "variáveis"),
+    status     = dplyr::coalesce(base::as.character(status), "A pagar")
   )
 
 if (!incluir_a_pagar) {
@@ -114,12 +103,13 @@ if (!incluir_a_pagar) {
 
 fluxo <- dplyr::bind_rows(entradas_fluxo, saidas_fluxo) %>%
   dplyr::mutate(
-    descricao     = dplyr::coalesce(descricao, "Sem descrição"),
-    mes_num       = base::as.integer(base::format(data, "%m")),
-    ano_num       = base::as.integer(base::format(data, "%Y")),
-    mes_ref       = base::format(data, "%Y-%m"),
-    mes_nome      = meses_pt[mes_num],
-    mes_label     = base::paste0(mes_nome, "/", ano_num)
+    grupo_1   = base::ifelse(base::trimws(grupo_1) == "", "Não informado", grupo_1),
+    grupo_2   = base::ifelse(base::trimws(grupo_2) == "", "Sem descrição", grupo_2),
+    mes_num   = base::as.integer(base::format(data, "%m")),
+    ano_num   = base::as.integer(base::format(data, "%Y")),
+    mes_ref   = base::format(data, "%Y-%m"),
+    mes_nome  = meses_pt[mes_num],
+    mes_label = base::paste0(mes_nome, "/", ano_num)
   )
 
 tabela_meses <- fluxo %>%
@@ -131,74 +121,69 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÃO DE HOVER INTELIGENTE (COM n = , TIPO DE DESPESA E FORMA DE PAGAMENTO)
+# 4. FUNÇÃO DE HOVER INTELIGENTE (COR DO RÓTULO + N E % + MÉDIA, MÁX E MÍN)
 # ==============================================================================
 
 montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
-  n_lanc <- base::nrow(df_sub)
+  cor_titulo <- base::ifelse(tipo_sel == "Entradas", cor_entradas, cor_saidas)
+  n_lanc     <- base::nrow(df_sub)
+  
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
-    return(base::paste0("<b>", titulo_periodo, "</b><br>", tipo_sel, ": R$ 0,00 (n = 0)"))
+    return(base::paste0(
+      "<b style='color:", cor_titulo, ";'>", titulo_periodo, "</b><br>",
+      "<b>", tipo_sel, ": R$ 0,00</b> (n = 0)"
+    ))
   }
   
   val_total <- base::sum(df_sub$valor, na.rm = TRUE)
   val_media <- base::mean(df_sub$valor, na.rm = TRUE)
-  val_maior <- base::max(df_sub$valor, na.rm = TRUE)
+  val_max   <- base::max(df_sub$valor, na.rm = TRUE)
+  val_min   <- base::min(df_sub$valor, na.rm = TRUE)
   
-  # Cabeçalho com (n = ...)
+  # Cabeçalho com o nome do mês na cor da série
   cabecalho <- base::paste0(
-    "<b>", titulo_periodo, "</b><br>",
+    "<b style='color:", cor_titulo, "; font-size:13px;'>", titulo_periodo, "</b><br>",
     "<b>", tipo_sel, ": R$ ", formatar_brl(val_total), "</b> (n = ", n_lanc, ")<br>"
   )
   
   if (tipo_sel == "Saídas") {
-    # 1. Agrupamento por Forma de Pagamento (credito, corrente, etc.) com n =
-    res_pgto <- df_sub %>%
-      dplyr::group_by(forma_pagamento) %>%
-      dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
-      dplyr::arrange(dplyr::desc(soma)) %>%
-      dplyr::mutate(
-        pct   = base::round((soma / val_total) * 100, 1),
-        linha = base::paste0("• ", forma_pagamento, ": R$ ", formatar_brl(soma), " (", pct, "% | n = ", qtd, ")")
-      )
-    bloco_1 <- base::paste0("<br><b>Por Forma de Pagamento:</b><br>", base::paste(res_pgto$linha, collapse = "<br>"))
-    
-    # 2. Agrupamento por Tipo de Despesa (variáveis, fixas, etc.) com n =
-    res_tipo <- df_sub %>%
-      dplyr::group_by(fonte_ou_tipo) %>%
-      dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
-      dplyr::arrange(dplyr::desc(soma)) %>%
-      dplyr::mutate(
-        pct   = base::round((soma / val_total) * 100, 1),
-        linha = base::paste0("• ", fonte_ou_tipo, ": R$ ", formatar_brl(soma), " (", pct, "% | n = ", qtd, ")")
-      )
-    bloco_2 <- base::paste0("<br><b>Por Tipo de Despesa:</b><br>", base::paste(res_tipo$linha, collapse = "<br>"))
-    
+    rotulo_1 <- "Forma de Pagamento:"
+    rotulo_2 <- "Tipo de Despesa:"
   } else {
-    # Para Entradas: Fonte de Renda e Frequência com n =
-    res_fonte <- df_sub %>%
-      dplyr::group_by(fonte_ou_tipo) %>%
-      dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
-      dplyr::arrange(dplyr::desc(soma)) %>%
-      dplyr::mutate(
-        pct   = base::round((soma / val_total) * 100, 1),
-        linha = base::paste0("• ", fonte_ou_tipo, ": R$ ", formatar_brl(soma), " (", pct, "% | n = ", qtd, ")")
-      )
-    bloco_1 <- base::paste0("<br><b>Por Fonte de Renda:</b><br>", base::paste(res_fonte$linha, collapse = "<br>"))
-    
-    res_freq <- df_sub %>%
-      dplyr::group_by(forma_pagamento) %>%
-      dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
-      dplyr::arrange(dplyr::desc(soma)) %>%
-      dplyr::mutate(
-        pct   = base::round((soma / val_total) * 100, 1),
-        linha = base::paste0("• ", forma_pagamento, ": R$ ", formatar_brl(soma), " (", pct, "% | n = ", qtd, ")")
-      )
-    bloco_2 <- base::paste0("<br><b>Por Frequência:</b><br>", base::paste(res_freq$linha, collapse = "<br>"))
+    rotulo_1 <- "Fonte de Renda:"
+    rotulo_2 <- "Descrição:"
   }
   
+  # Agrupamento 1 (Forma de Pagamento ou Fonte de Renda)
+  res_1 <- df_sub %>%
+    dplyr::group_by(grupo_1) %>%
+    dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
+    dplyr::arrange(dplyr::desc(soma)) %>%
+    utils::head(5) %>%
+    dplyr::mutate(
+      pct   = base::round((soma / val_total) * 100, 1),
+      linha = base::paste0("• ", grupo_1, ": R$ ", formatar_brl(soma), " (n = ", qtd, " | ", pct, "%)")
+    )
+  bloco_1 <- base::paste0("<br><b>", rotulo_1, "</b><br>", base::paste(res_1$linha, collapse = "<br>"))
+  
+  # Agrupamento 2 (Tipo de Despesa ou Descrição)
+  res_2 <- df_sub %>%
+    dplyr::group_by(grupo_2) %>%
+    dplyr::summarise(soma = base::sum(valor, na.rm = TRUE), qtd = dplyr::n(), .groups = "drop") %>%
+    dplyr::arrange(dplyr::desc(soma)) %>%
+    utils::head(5) %>%
+    dplyr::mutate(
+      pct   = base::round((soma / val_total) * 100, 1),
+      linha = base::paste0("• ", grupo_2, ": R$ ", formatar_brl(soma), " (n = ", qtd, " | ", pct, "%)")
+    )
+  bloco_2 <- base::paste0("<br><b>", rotulo_2, "</b><br>", base::paste(res_2$linha, collapse = "<br>"))
+  
+  # Rodapé Estatístico: Média, Máx e Mín
   rodape_stats <- base::paste0(
     "<br><br><span style='color:#444444; font-size:11px'>",
-    "Média/lanç.: R$ ", formatar_brl(val_media), " | Maior: R$ ", formatar_brl(val_maior),
+    "<b>Média:</b> R$ ", formatar_brl(val_media),
+    " | <b>Máx:</b> R$ ", formatar_brl(val_max),
+    " | <b>Mín:</b> R$ ", formatar_brl(val_min),
     "</span>"
   )
   
@@ -207,7 +192,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
 
 
 # ==============================================================================
-# 5. GERADOR DE PARES DE CAMADAS (SINCRONIZA EIXO X E DIAS COM MOVIMENTO)
+# 5. GERADOR DE CAMADAS (SINCRONIZA EIXO X E DIAS COM MOVIMENTO)
 # ==============================================================================
 
 gerar_par_traces <- function(mes_sel, usuario_sel) {
@@ -247,7 +232,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     eixo_x_vec <- base::as.character(esqueleto$eixo_x)
     
   } else {
-    # Visão Diária: mostra no eixo X APENAS os dias que possuem dados (Entradas ou Saídas > 0)
     d_mes <- d %>% dplyr::filter(mes_label == mes_sel)
     
     dias_ativos <- d_mes %>%
@@ -261,8 +245,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       eixo_x_vec <- base::c("<b>Sem lançamentos</b>")
       y_e        <- base::c(0)
       y_s        <- base::c(0)
-      hov_e      <- base::c(base::paste0("<b>", mes_sel, "</b><br>Entradas: R$ 0,00 (n = 0)"))
-      hov_s      <- base::c(base::paste0("<b>", mes_sel, "</b><br>Saídas: R$ 0,00 (n = 0)"))
+      hov_e      <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Entradas"))
+      hov_s      <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Saídas"))
     } else {
       n_pts      <- base::length(dias_ativos)
       eixo_x_vec <- base::paste0("<b>", base::format(dias_ativos, "%d"), "</b>")
@@ -286,13 +270,10 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     }
   }
   
-  # Cálculo do teto do eixo Y (Barras Empilhadas vs Linhas)
   soma_topo <- y_e + y_s
   max_bar   <- base::max(base::c(soma_topo, 100), na.rm = TRUE) * 1.22
   max_line  <- base::max(base::c(y_e, y_s, 100), na.rm = TRUE) * 1.28
   
-  # Rótulos das Barras: se a barra de Entrada tiver menos de 7% da altura do gráfico,
-  # oculta o texto interno para nunca encolher a fonte ou sair da barra; mantém no modo Linhas!
   txt_e_bar  <- base::ifelse(y_e >= (max_bar * 0.07), formatar_brl_curto(y_e), "")
   txt_s_bar  <- base::ifelse(y_s > 0, formatar_brl_curto(y_s), "")
   txt_e_line <- formatar_brl_curto(y_e)
@@ -303,9 +284,10 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   dif   <- tot_e - tot_s
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
   
-  nome_e   <- base::paste0("<b>Entradas (Total: R$ ", formatar_brl(tot_e), ")</b>")
-  nome_s   <- base::paste0("<b>Saídas (Total: R$ ", formatar_brl(tot_s), ")</b>")
-  nome_dif <- base::paste0("<b>Diferença (Total: ", sinal, "R$ ", formatar_brl(base::abs(dif)), ")</b>")
+  # Legenda enxuta sem a palavra "Total"
+  nome_e   <- base::paste0("<b>Entradas: R$ ", formatar_brl(tot_e), "</b>")
+  nome_s   <- base::paste0("<b>Saídas: R$ ", formatar_brl(tot_s), "</b>")
+  nome_dif <- base::paste0("<b>Diferença: ", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
   
   base::list(
     x          = base::as.character(eixo_x_vec),
@@ -344,13 +326,13 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (TAMANHO DE FONTE FIXO E LINHAS LIMPAS)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM CLIQUE NA BARRA/MÊS)
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
 
 grafico <- plotly::plot_ly(height = altura_grafico) %>%
-  # Série 0: Entradas (Base Azul Ciano)
+  # Série 0: Entradas
   plotly::add_bars(
     x                     = estado_ini$x,
     y                     = estado_ini$e_y,
@@ -366,7 +348,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
     hoverinfo             = "text",
     hovertext             = estado_ini$e_hover
   ) %>%
-  # Série 1: Saídas (Topo Azul Oceano)
+  # Série 1: Saídas
   plotly::add_bars(
     x                     = estado_ini$x,
     y                     = estado_ini$s_y,
@@ -381,11 +363,12 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
     hovertext             = estado_ini$s_hover
   ) %>%
   plotly::layout(
+    autosize        = TRUE,
     font            = base::list(family = "Inter, sans-serif"),
     separators      = ",.",
     barmode         = "stack",
     barcornerradius = raio_cantos,
-    bargap          = 0.25,
+    bargap          = 0.28,
     uniformtext     = base::list(mode = "show", minsize = tamanho_rotulos),
     
     hoverlabel = base::list(
@@ -420,7 +403,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
     ),
     
     showlegend    = FALSE,
-    margin        = base::list(t = 28, b = 45, l = 65, r = 15),
+    margin        = base::list(t = 28, b = 42, l = 62, r = 12),
     plot_bgcolor  = "white",
     paper_bgcolor = "white"
   ) %>%
@@ -434,6 +417,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
       let mesAtual     = 'Todos os Meses';
       let usuarioAtual = 'Todos';
       let modoAtual    = 'barras';
+      let indiceClicado = null; // Índice da coluna selecionada no gráfico
 
       const selMes        = painel.querySelector('.select-mes-alf');
       const botoesUsuario = painel.querySelectorAll('.btn-usuario-alf');
@@ -443,38 +427,82 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
       const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
       const quadDiferenca = painel.querySelector('.quadrado-diferenca');
 
+      function formatarMoedaJS(v) {
+        return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function atualizarRotulosTopo(d) {
+        if (indiceClicado !== null && d.x && indiceClicado < d.x.length) {
+          const valE  = d.e_y[indiceClicado] || 0;
+          const valS  = d.s_y[indiceClicado] || 0;
+          const dif   = valE - valS;
+          const sinal = dif > 0 ? '+' : (dif < 0 ? '-' : '');
+          const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
+          const rotX  = (d.x[indiceClicado] || '').replace(/<[^>]*>/g, '');
+
+          if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
+          if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
+          if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+          if (quadDiferenca) quadDiferenca.style.background = corD;
+        } else {
+          const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
+          const nomeS   = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
+          const nomeDif = Array.isArray(d.dif_nome) ? d.dif_nome[0] : d.dif_nome;
+          const corDif  = Array.isArray(d.dif_cor)  ? d.dif_cor[0]  : d.dif_cor;
+
+          if (legEntradas)  legEntradas.innerHTML  = nomeE;
+          if (legSaidas)    legSaidas.innerHTML    = nomeS;
+          if (legDiferenca) legDiferenca.innerHTML = nomeDif;
+          if (quadDiferenca) quadDiferenca.style.background = corDif;
+        }
+      }
+
       function atualizarGrafico() {
         const d = DADOS[mesAtual] && DADOS[mesAtual][usuarioAtual];
         if (!d) return;
 
         const isMobile  = window.innerWidth <= 768;
         const ehBarra   = (modoAtual === 'barras');
-        const ehDiario  = (mesAtual !== 'Todos os Meses');
         const qtdPontos = d.x ? d.x.length : 1;
 
         const maxBar    = Array.isArray(d.max_bar)  ? d.max_bar[0]  : d.max_bar;
         const maxLine   = Array.isArray(d.max_line) ? d.max_line[0] : d.max_line;
         const maxY      = ehBarra ? maxBar : maxLine;
 
-        const nomeE     = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
-        const nomeS     = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
-        const nomeDif   = Array.isArray(d.dif_nome) ? d.dif_nome[0] : d.dif_nome;
-        const corDif    = Array.isArray(d.dif_cor)  ? d.dif_cor[0]  : d.dif_cor;
+        atualizarRotulosTopo(d);
 
-        // Atualiza os 3 rótulos do cabeçalho (Saídas, Entradas e Diferença) dinamicamente!
-        if (legEntradas)  legEntradas.innerHTML  = nomeE;
-        if (legSaidas)    legSaidas.innerHTML    = nomeS;
-        if (legDiferenca) legDiferenca.innerHTML = nomeDif;
-        if (quadDiferenca) quadDiferenca.style.background = corDif;
-
-        const tamRotulo = isMobile ? 9 : ", tamanho_rotulos, ";
-        const tamEixoX  = isMobile ? (ehDiario ? 9.5 : 10.5) : ", tamanho_eixo_x, ";
-        const tamEixoY  = isMobile ? 9.5 : 11;
+        const tamRotulo = isMobile ? 8.5 : ", tamanho_rotulos, ";
+        const tamEixoX  = isMobile ? (qtdPontos > 6 ? 8.5 : 10) : ", tamanho_eixo_x, ";
+        const tamEixoY  = isMobile ? 9 : 11;
         const alturaAtu = isMobile ? ", altura_grafico_mobile, " : ", altura_grafico, ";
         const raioAtu   = isMobile ? 5 : ", raio_cantos, ";
 
-        // No modo Linhas: posiciona cada rótulo de forma inteligente (quem é maior fica bem acima da bolinha,
-        // quem é menor fica abaixo ou acima com folga) para NUNCA ficar em cima da linha!
+        // Efeito visual de destaque suave quando uma coluna/mês está selecionada
+        const opacidadeArr = [];
+        const bordaLargArr = [];
+        const bordaCorArr  = [];
+        const eixoXFormatado = [];
+
+        for (let i = 0; i < qtdPontos; i++) {
+          if (indiceClicado === null) {
+            opacidadeArr.push(1);
+            bordaLargArr.push(0);
+            bordaCorArr.push('rgba(0,0,0,0)');
+            eixoXFormatado.push(d.x[i]);
+          } else if (i === indiceClicado) {
+            opacidadeArr.push(1);
+            bordaLargArr.push(2); // Borda suave na coluna clicada
+            bordaCorArr.push('#03045e');
+            eixoXFormatado.push('<span style=\"color:#03045e; text-decoration:underline;\">' + d.x[i] + '</span>');
+          } else {
+            opacidadeArr.push(0.32); // Esmaece suavemente as outras colunas
+            bordaLargArr.push(0);
+            bordaCorArr.push('rgba(0,0,0,0)');
+            eixoXFormatado.push(d.x[i]);
+          }
+        }
+
+        // Posicionamento limpo dos rótulos no modo Linhas
         const posLinhasE = [];
         const posLinhasS = [];
         const txtLinhasE = [];
@@ -509,16 +537,17 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
           }
         }
 
-        const ocultarTxtMobile = (isMobile && qtdPontos > 12);
+        const ocultarTxtMobile = (isMobile && qtdPontos > 10);
 
         const traceEntradas = {
-          x: d.x,
+          x: eixoXFormatado,
           y: d.e_y,
-          name: nomeE,
           type: ehBarra ? 'bar' : 'scatter',
           mode: ehBarra ? undefined : 'lines+markers+text',
-          marker: { color: '", cor_entradas, "', size: isMobile ? 7 : 8 },
-          line: { color: '", cor_entradas, "', width: isMobile ? 2.2 : 3 },
+          marker: ehBarra
+            ? { color: '", cor_entradas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
+            : { color: '", cor_entradas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
+          line: { color: '", cor_entradas, "', width: isMobile ? 1.5 : 1.8 }, // Linha mais fina e elegante
           text: ocultarTxtMobile ? d.e_y.map(function() { return ''; }) : (ehBarra ? d.e_txt_bar : txtLinhasE),
           textposition: ehBarra ? 'inside' : posLinhasE,
           insidetextanchor: 'middle',
@@ -535,13 +564,14 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
         };
 
         const traceSaidas = {
-          x: d.x,
+          x: eixoXFormatado,
           y: d.s_y,
-          name: nomeS,
           type: ehBarra ? 'bar' : 'scatter',
           mode: ehBarra ? undefined : 'lines+markers+text',
-          marker: { color: '", cor_saidas, "', size: isMobile ? 7 : 8 },
-          line: { color: '", cor_saidas, "', width: isMobile ? 2.2 : 3 },
+          marker: ehBarra
+            ? { color: '", cor_saidas, "', opacity: opacidadeArr, line: { color: bordaCorArr, width: bordaLargArr } }
+            : { color: '", cor_saidas, "', size: isMobile ? 6 : 7, opacity: opacidadeArr },
+          line: { color: '", cor_saidas, "', width: isMobile ? 1.5 : 1.8 }, // Linha mais fina e elegante
           text: ocultarTxtMobile ? d.s_y.map(function() { return ''; }) : (ehBarra ? d.s_txt_bar : txtLinhasS),
           textposition: ehBarra ? 'outside' : posLinhasS,
           constraintext: 'none',
@@ -552,25 +582,27 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
             color: ehBarra ? '#000000' : '", cor_saidas, "'
           },
           hoverinfo: 'text',
-          hovertext: d.s_hover
+          hovertext: d.s.hover
         };
 
         const minY = ehBarra ? 0 : -(maxLine * 0.08);
+        const larguraContainer = painel.clientWidth || window.innerWidth;
 
         const novoLayout = Object.assign({}, el.layout, {
+          width: larguraContainer,
           height: alturaAtu,
           barmode: 'stack',
           barcornerradius: raioAtu,
-          bargap: isMobile ? (qtdPontos > 8 ? 0.18 : 0.30) : (qtdPontos > 10 ? 0.22 : 0.30),
+          bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.32),
           uniformtext: { mode: 'show', minsize: tamRotulo },
           margin: isMobile
-            ? { t: 24, b: qtdPontos > 10 ? 40 : 32, l: 48, r: 10 }
-            : { t: 30, b: 45, l: 65, r: 15 },
+            ? { t: 22, b: qtdPontos > 8 ? 38 : 30, l: 44, r: 8 }
+            : { t: 28, b: 42, l: 62, r: 12 },
           xaxis: Object.assign({}, el.layout.xaxis, {
             type: 'category',
             categoryorder: 'array',
-            categoryarray: d.x,
-            tickangle: (isMobile && qtdPontos > 10) ? -45 : 0,
+            categoryarray: eixoXFormatado,
+            tickangle: (isMobile && qtdPontos > 8) ? -45 : 0,
             tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
           }),
           yaxis: Object.assign({}, el.layout.yaxis, {
@@ -579,21 +611,48 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
           })
         });
 
+        el.style.width  = '100%';
         el.style.height = alturaAtu + 'px';
         Plotly.react(el, [traceEntradas, traceSaidas], novoLayout, {displayModeBar: false, responsive: true});
       }
 
+      // Evento de clique na barra/ponto para destacar a coluna e mostrar apenas as informações daquele mês/dia
+      el.on('plotly_click', function(data) {
+        if (!data || !data.points || !data.points.length) return;
+        const idx = data.points[0].pointIndex;
+        if (indiceClicado === idx) {
+          indiceClicado = null; // Desmarca se clicar de novo
+        } else {
+          indiceClicado = idx;
+        }
+        atualizarGrafico();
+      });
+
+      // Permite clicar também direto no nome do mês no eixo X (ex: 'Agosto', 'Setembro')
+      el.addEventListener('click', function(ev) {
+        const tickNode = ev.target.closest('.xtick');
+        if (!tickNode) return;
+        const todosTicks = Array.from(el.querySelectorAll('.xtick'));
+        const idx = todosTicks.indexOf(tickNode);
+        if (idx !== -1) {
+          indiceClicado = (indiceClicado === idx) ? null : idx;
+          atualizarGrafico();
+        }
+      });
+
       atualizarGrafico();
+      setTimeout(atualizarGrafico, 100);
 
       let timerResize;
       window.addEventListener('resize', function() {
         clearTimeout(timerResize);
-        timerResize = setTimeout(atualizarGrafico, 150);
+        timerResize = setTimeout(atualizarGrafico, 120);
       });
 
       if (selMes) {
         selMes.addEventListener('change', function() {
           mesAtual = this.value;
+          indiceClicado = null;
           atualizarGrafico();
         });
       }
@@ -606,6 +665,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
           } else {
             usuarioAtual = clicado;
           }
+          indiceClicado = null;
           botoesUsuario.forEach(function(b) {
             b.classList.toggle('ativo', b.getAttribute('data-usuario') === usuarioAtual);
           });
@@ -626,22 +686,35 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (COM O 3º RÓTULO DE DIFERENÇA)
+# 8. ESTILO CSS E ESTRUTURA HTML (CORREÇÃO TOTAL DE LARGURA NO MOBILE)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   .painel-fluxo-alf {
     max-width: 950px;
     width: 100%;
-    margin: 25px auto;
+    margin: 20px auto;
     font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: #ffffff;
     box-sizing: border-box;
+    overflow: hidden;
   }
-  .painel-fluxo-alf .grafico-scroll {
+  /* Sobrescreve qualquer min-width global do s8.css que cortava o gráfico no celular */
+  .painel-fluxo-alf .grafico-scroll,
+  .painel-fluxo-alf .html-widget,
+  .painel-fluxo-alf .plotly,
+  .painel-fluxo-alf .js-plotly-plot,
+  .painel-fluxo-alf .plot-container,
+  .painel-fluxo-alf .svg-container {
     width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .painel-fluxo-alf .xtick,
+  .painel-fluxo-alf .bars path {
+    cursor: pointer !important;
   }
   .barra-controles-alf {
     display: flex;
@@ -650,7 +723,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     justify-content: space-between;
     gap: 14px;
     padding: 12px 16px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     background: #fcfcfc;
     border: 1px solid #e0e0e0;
     border-top: 2px solid #000000;
@@ -665,20 +738,14 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     color: ", titulo_cor, ";
     font-size: ", titulo_tamanho, "px;
     font-weight: 700;
-    margin: 0 0 4px 0;
-    line-height: 1.25;
-  }
-  .subtitulo-grafico-alf {
-    color: ", sub_cor, ";
-    font-size: ", sub_tamanho, "px;
-    font-weight: 400;
     margin: 0 0 10px 0;
+    line-height: 1.25;
   }
   .legenda-custom-alf {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
     margin: 0;
     padding: 0;
   }
@@ -810,12 +877,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
      ========================================================= */
   @media (max-width: 768px) {
     .painel-fluxo-alf {
-      margin: 15px auto;
+      margin: 12px auto;
     }
     .barra-controles-alf {
-      padding: 10px 12px;
-      gap: 8px;
-      margin-bottom: 12px;
+      padding: 9px 11px;
+      gap: 7px;
+      margin-bottom: 10px;
     }
     .grupo-controle-alf {
       width: 100%;
@@ -829,33 +896,32 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       font-size: 11.5px;
       padding: 4px 8px;
       flex: 1;
-      max-width: 180px;
+      max-width: 175px;
     }
     .btn-usuario-alf.texto-todos {
       padding: 4px 10px;
       font-size: 11px;
     }
     .btn-usuario-alf img {
-      width: 30px;
-      height: 30px;
+      width: 29px;
+      height: 29px;
     }
     .btn-modo-alf {
       font-size: 11px;
       padding: 4px 9px;
     }
     .titulo-grafico-alf {
-      font-size: 14px;
-    }
-    .subtitulo-grafico-alf {
-      font-size: 11.5px;
+      font-size: 13.5px;
       margin-bottom: 8px;
     }
     .legenda-custom-alf {
-      gap: 10px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
     }
     .item-legenda-alf {
-      font-size: 11px;
-      gap: 5px;
+      font-size: 11.5px;
+      gap: 6px;
     }
     .quadrado-legenda-alf {
       width: 11px;
@@ -933,11 +999,10 @@ controles_html <- htmltools::tags$div(
   )
 )
 
-# Cabeçalho com os 3 Rótulos alinhados à esquerda: Saídas, Entradas e Diferença!
+# Cabeçalho sem subtítulo e com os 3 Rótulos enxutos: Saídas, Entradas e Diferença
 cabecalho_html <- htmltools::tags$div(
   class = "cabecalho-grafico-alf",
   htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome),
-  htmltools::tags$div(class = "subtitulo-grafico-alf", subtitulo_texto),
   htmltools::tags$div(
     class = "legenda-custom-alf",
     htmltools::tags$span(
@@ -971,5 +1036,4 @@ grafico_fluxo <- htmltools::tagList(
     htmltools::tags$div(class = "grafico-scroll", grafico)
   )
 )
-
 grafico_fluxo
