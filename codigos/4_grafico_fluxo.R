@@ -1,12 +1,13 @@
 # ==============================================================================
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
-# Estrutura visual:
-#   1. Título principal ACIMA da linha preta da barra de filtros.
-#   2. Barra de filtros (Período, Usuário com fotos, Visão) com linha preta no topo.
-#   3. Legenda limpa (Saídas, Entradas, Diferença) sem caixinhas/bordas ao redor.
-#   4. Card inferior com abas dinâmicas ("Entradas Setembro/2026"), Resumo
-#      Estatístico acima e Tabela ABNT limpa abaixo.
+# Ajustes implementados:
+#   1. Saídas, Entradas e Diferença DENTRO da caixa de filtros (na linha inferior).
+#   2. Tabela do Card inferior com o EXATO estilo da tabela DT (ícones Bootstrap,
+#      barra preta ::after de 80% sob cada coluna, grade #e0e0e0 e cantos 12px).
+#   3. Sem agrupamento "+X ver": todas as descrições aparecem em linhas próprias,
+#      com Forma de Pagamento, Tipo de Despesa, Item de Consumo, Total e (%)
+#      mesclados verticalmente (rowspan).
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -67,6 +68,16 @@ meses_pt <- base::c(
 
 formatar_brl <- function(x) {
   base::formatC(x, format = "f", digits = 2, big.mark = ".", decimal.mark = ",")
+}
+
+# Formata a célula de moeda igual à sua tabela DT (R$ na esquerda e número na direita)
+formatar_celula_moeda <- function(x, negrito = FALSE) {
+  peso <- if (negrito) "font-weight: 700;" else ""
+  base::paste0(
+    "<div class='celula-moeda-alf' style='", peso, "'>",
+    "<span>R$</span><span>", formatar_brl(x), "</span>",
+    "</div>"
+  )
 }
 
 formatar_brl_curto <- function(x) {
@@ -150,7 +161,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER E TABELA CONSOLIDADA (1 LINHA POR ITEM DE CONSUMO)
+# 4. FUNÇÕES DE HOVER E TABELA NO ESTILO DA TABELA DT (BARRA PRETA + GRADE)
 # ==============================================================================
 
 # 4.1 Hover flutuante (PC) para Barras e Linhas
@@ -254,7 +265,7 @@ montar_barra_metricas <- function(vals, extra_quartis = NULL) {
   )
 }
 
-# 4.3 Tabela ABNT Limpa (Resumo Estatístico no topo + 1 linha enxuta por Item de Consumo)
+# 4.3 Tabela no estilo idêntico ao da foto (Ícones Bootstrap + Barra Preta 80% + Todas as linhas visíveis e mescladas)
 montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, incluir_quartis = FALSE) {
   n_lanc <- base::nrow(df_sub)
   
@@ -306,25 +317,23 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       k_rows <- base::nrow(itens_f)
       
       for (j in base::seq_len(k_rows)) {
-        borda_fim_grupo <- if (j == k_rows) " class='fim-grupo-row'" else ""
-        
         if (j == 1) {
           linhas_html <- base::c(linhas_html, base::paste0(
-            "<tr", borda_fim_grupo, ">",
-            "<td rowspan='", k_rows, "' class='cel-mesclada'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>",
+            "<tr>",
+            "<td rowspan='", k_rows, "' class='cel-primeira-col'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>",
             "<td>", itens_f$desc_lbl[j], "</td>",
-            "<td class='col-num'>R$ ", formatar_brl(itens_f$val_item[j]), "</td>",
-            "<td class='col-num'>", itens_f$pct_item[j], "%</td>",
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>R$ ", formatar_brl(tot_f), "</b></td>",
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>", pct_f, "%</b></td>",
+            "<td>", formatar_celula_moeda(itens_f$val_item[j], FALSE), "</td>",
+            "<td>", itens_f$pct_item[j], "%</td>",
+            "<td rowspan='", k_rows, "'>", formatar_celula_moeda(tot_f, TRUE), "</td>",
+            "<td rowspan='", k_rows, "'><b>", pct_f, "%</b></td>",
             "</tr>"
           ))
         } else {
           linhas_html <- base::c(linhas_html, base::paste0(
-            "<tr", borda_fim_grupo, ">",
+            "<tr>",
             "<td>", itens_f$desc_lbl[j], "</td>",
-            "<td class='col-num'>R$ ", formatar_brl(itens_f$val_item[j]), "</td>",
-            "<td class='col-num'>", itens_f$pct_item[j], "%</td>",
+            "<td>", formatar_celula_moeda(itens_f$val_item[j], FALSE), "</td>",
+            "<td>", itens_f$pct_item[j], "%</td>",
             "</tr>"
           ))
         }
@@ -332,33 +341,34 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     }
     
     linha_total <- base::paste0(
-      "<tr class='linha-total-card'>",
-      "<td><b>Total (", n_lanc, ")</b></td>",
+      "<tr class='linha-total-dt'>",
+      "<td class='cel-primeira-col'><b>Total (", n_lanc, ")</b></td>",
       "<td>—</td>",
-      "<td class='col-num'><b>R$ ", formatar_brl(val_total), "</b></td>",
-      "<td class='col-num'><b>100.0%</b></td>",
-      "<td class='col-num'><b>R$ ", formatar_brl(val_total), "</b></td>",
-      "<td class='col-num'><b>100.0%</b></td>",
+      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
+      "<td><b>100.0%</b></td>",
+      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
+      "<td><b>100.0%</b></td>",
       "</tr>"
     )
     
     tabela_final <- base::paste0(
-      "<div class='wrapper-tabela-card'>",
-      "<table class='tabela-resumo-card'>",
+      "<div class='wrapper-tabela-dt-alf'>",
+      "<table class='tabela-estilo-dt-alf'>",
       "<thead><tr>",
-      "<th>Fonte de Renda</th>",
-      "<th>Descrição</th>",
-      "<th class='col-num'>Valor</th>",
-      "<th class='col-num'>(%)</th>",
-      "<th class='col-num'>Total</th>",
-      "<th class='col-num'>(%)</th>",
+      "<th><i class='bi bi-briefcase'></i> Fonte de Renda</th>",
+      "<th><i class='bi bi-file-earmark-text'></i> Descrição</th>",
+      "<th><i class='bi bi-cash-stack'></i> Valor</th>",
+      "<th><i class='bi bi-percent'></i> (%)</th>",
+      "<th><i class='bi bi-calculator'></i> Total</th>",
+      "<th><i class='bi bi-pie-chart'></i> (%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
     )
     
   } else {
-    # SAÍDAS ENXUTAS: Cada (Forma de Pagamento x Tipo de Despesa x Item de Consumo) ocupa 1 única linha
+    # SAÍDAS SEM AGRUPAMENTO OCULTO: Todas as descrições aparecem separadas em linhas próprias!
+    # Forma de Pagamento, Tipo de Despesa, Item de Consumo, Total e (%) ficam mesclados (rowspan).
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -381,99 +391,88 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       
       df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
       
+      # Contagem de lançamentos por Tipo de Despesa e por Item de Consumo
       qtd_por_tipo <- df_forma %>%
         dplyr::count(grupo_2, name = "qtd_lanc_tipo")
       
-      itens_por_consumo <- df_forma %>%
+      qtd_por_item <- df_forma %>%
+        dplyr::count(grupo_2, item_consumo, name = "qtd_lanc_item")
+      
+      # Totais para ordenar Tipo de Despesa e Item de Consumo do maior para o menor valor
+      ordem_tipo <- df_forma %>%
+        dplyr::group_by(grupo_2) %>%
+        dplyr::summarise(soma_t = base::sum(valor, na.rm = TRUE), .groups = "drop")
+      
+      ordem_item <- df_forma %>%
+        dplyr::group_by(grupo_2, item_consumo) %>%
+        dplyr::summarise(soma_i = base::sum(valor, na.rm = TRUE), .groups = "drop")
+      
+      # Todas as descrições em linhas separadas (sem esconder nada em "+X ver")
+      itens_f <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
           val_desc = base::sum(valor, na.rm = TRUE),
           qtd_desc = dplyr::n(),
           .groups  = "drop"
         ) %>%
-        dplyr::arrange(grupo_2, item_consumo, dplyr::desc(val_desc)) %>%
-        dplyr::mutate(
-          txt_unitario = base::paste0(
-            descricao,
-            base::ifelse(qtd_desc > 1, base::paste0(" <span class='badge-n'>(", qtd_desc, ")</span>"), "")
-          ),
-          txt_detalhe = base::paste0(
-            "<div class='item-lista-oculta'><span>• ", descricao,
-            base::ifelse(qtd_desc > 1, base::paste0(" (", qtd_desc, "x)"), ""),
-            "</span><b>R$ ", formatar_brl(val_desc), "</b></div>"
-          )
-        ) %>%
-        dplyr::group_by(grupo_2, item_consumo) %>%
-        dplyr::summarise(
-          qtd_lanc_item = base::sum(qtd_desc),
-          n_desc_dist   = dplyr::n(),
-          val_item      = base::sum(val_desc, na.rm = TRUE),
-          desc_html     = if (dplyr::n() == 1) {
-            dplyr::first(txt_unitario)
-          } else {
-            base::paste0(
-              "<details class='detalhes-extras-card'>",
-              "<summary>", dplyr::first(txt_unitario), " <span class='pilula-ver-mais'>+", dplyr::n() - 1, " ver ▾</span></summary>",
-              "<div class='lista-oculta-card'>", base::paste(txt_detalhe, collapse = ""), "</div>",
-              "</details>"
-            )
-          },
-          .groups = "drop"
-        ) %>%
         dplyr::left_join(qtd_por_tipo, by = "grupo_2") %>%
-        dplyr::arrange(grupo_2, dplyr::desc(val_item)) %>%
+        dplyr::left_join(qtd_por_item, by = base::c("grupo_2", "item_consumo")) %>%
+        dplyr::left_join(ordem_tipo, by = "grupo_2") %>%
+        dplyr::left_join(ordem_item, by = base::c("grupo_2", "item_consumo")) %>%
+        dplyr::arrange(dplyr::desc(soma_t), grupo_2, dplyr::desc(soma_i), item_consumo, dplyr::desc(val_desc)) %>%
         dplyr::mutate(
-          pct_item = base::formatC((val_item / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
+          pct_desc = base::formatC((val_desc / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
           tipo_lbl = base::paste0("<b>", grupo_2, "</b> <span class='badge-n'>(", qtd_lanc_tipo, ")</span>"),
-          item_lbl = base::ifelse(qtd_lanc_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_lanc_item, ")</span>"), item_consumo)
+          item_lbl = base::ifelse(qtd_lanc_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_lanc_item, ")</span>"), item_consumo),
+          desc_lbl = base::ifelse(qtd_desc > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_desc, ")</span>"), descricao)
         )
       
-      linhas_por_tipo <- itens_por_consumo %>%
+      # Quantidade exata de linhas que cada Tipo de Despesa e cada Item de Consumo vão mesclar (rowspan)
+      linhas_por_tipo <- itens_f %>%
         dplyr::count(grupo_2, name = "n_rows_tipo")
       
-      itens_por_consumo <- itens_por_consumo %>%
+      linhas_por_item <- itens_f %>%
+        dplyr::count(grupo_2, item_consumo, name = "n_rows_item")
+      
+      itens_f <- itens_f %>%
         dplyr::left_join(linhas_por_tipo, by = "grupo_2") %>%
+        dplyr::left_join(linhas_por_item, by = base::c("grupo_2", "item_consumo")) %>%
         dplyr::group_by(grupo_2) %>%
-        dplyr::mutate(
-          prim_tipo = dplyr::row_number() == 1,
-          ult_tipo  = dplyr::row_number() == dplyr::n()
-        ) %>%
+        dplyr::mutate(prim_tipo = dplyr::row_number() == 1) %>%
+        dplyr::group_by(grupo_2, item_consumo) %>%
+        dplyr::mutate(prim_item = dplyr::row_number() == 1) %>%
         dplyr::ungroup()
       
-      k_rows <- base::nrow(itens_por_consumo)
+      k_rows <- base::nrow(itens_f)
       
       for (j in base::seq_len(k_rows)) {
-        cls_tr <- if (j == k_rows) {
-          " class='fim-grupo-row'"
-        } else if (itens_por_consumo$ult_tipo[j]) {
-          " class='fim-subitem-row'"
-        } else {
-          ""
-        }
-        
         cel_forma <- if (j == 1) {
-          base::paste0("<td rowspan='", k_rows, "' class='cel-mesclada'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>")
+          base::paste0("<td rowspan='", k_rows, "' class='cel-primeira-col'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>")
         } else ""
         
-        cel_tipo <- if (itens_por_consumo$prim_tipo[j]) {
-          base::paste0("<td rowspan='", itens_por_consumo$n_rows_tipo[j], "' class='cel-mesclada-sub'>", itens_por_consumo$tipo_lbl[j], "</td>")
+        cel_tipo <- if (itens_f$prim_tipo[j]) {
+          base::paste0("<td rowspan='", itens_f$n_rows_tipo[j], "'>", itens_f$tipo_lbl[j], "</td>")
+        } else ""
+        
+        cel_item <- if (itens_f$prim_item[j]) {
+          base::paste0("<td rowspan='", itens_f$n_rows_item[j], "'>", itens_f$item_lbl[j], "</td>")
         } else ""
         
         cel_tot_forma <- if (j == 1) {
           base::paste0(
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>R$ ", formatar_brl(tot_f), "</b></td>",
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>", pct_f, "%</b></td>"
+            "<td rowspan='", k_rows, "'>", formatar_celula_moeda(tot_f, TRUE), "</td>",
+            "<td rowspan='", k_rows, "'><b>", pct_f, "%</b></td>"
           )
         } else ""
         
         linhas_html <- base::c(linhas_html, base::paste0(
-          "<tr", cls_tr, ">",
+          "<tr>",
           cel_forma,
           cel_tipo,
-          "<td>", itens_por_consumo$item_lbl[j], "</td>",
-          "<td>", itens_por_consumo$desc_html[j], "</td>",
-          "<td class='col-num'>R$ ", formatar_brl(itens_por_consumo$val_item[j]), "</td>",
-          "<td class='col-num'>", itens_por_consumo$pct_item[j], "%</td>",
+          cel_item,
+          "<td>", itens_f$desc_lbl[j], "</td>",
+          "<td>", formatar_celula_moeda(itens_f$val_desc[j], FALSE), "</td>",
+          "<td>", itens_f$pct_desc[j], "%</td>",
           cel_tot_forma,
           "</tr>"
         ))
@@ -481,30 +480,30 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     }
     
     linha_total <- base::paste0(
-      "<tr class='linha-total-card'>",
-      "<td><b>Total (", n_lanc, ")</b></td>",
+      "<tr class='linha-total-dt'>",
+      "<td class='cel-primeira-col'><b>Total (", n_lanc, ")</b></td>",
       "<td>—</td>",
       "<td>—</td>",
       "<td>—</td>",
-      "<td class='col-num'><b>R$ ", formatar_brl(val_total), "</b></td>",
-      "<td class='col-num'><b>100.0%</b></td>",
-      "<td class='col-num'><b>R$ ", formatar_brl(val_total), "</b></td>",
-      "<td class='col-num'><b>100.0%</b></td>",
+      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
+      "<td><b>100.0%</b></td>",
+      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
+      "<td><b>100.0%</b></td>",
       "</tr>"
     )
     
     tabela_final <- base::paste0(
-      "<div class='wrapper-tabela-card'>",
-      "<table class='tabela-resumo-card'>",
+      "<div class='wrapper-tabela-dt-alf'>",
+      "<table class='tabela-estilo-dt-alf'>",
       "<thead><tr>",
-      "<th>Forma de Pagamento</th>",
-      "<th>Tipo de Despesa</th>",
-      "<th>Item de Consumo</th>",
-      "<th>Descrição</th>",
-      "<th class='col-num'>Valor</th>",
-      "<th class='col-num'>(%)</th>",
-      "<th class='col-num'>Total</th>",
-      "<th class='col-num'>(%)</th>",
+      "<th><i class='bi bi-credit-card'></i> Forma de Pagamento</th>",
+      "<th><i class='bi bi-tags'></i> Tipo de Despesa</th>",
+      "<th><i class='bi bi-cart3'></i> Item de Consumo</th>",
+      "<th><i class='bi bi-file-earmark-text'></i> Descrição</th>",
+      "<th><i class='bi bi-cash-stack'></i> Valor</th>",
+      "<th><i class='bi bi-percent'></i> (%)</th>",
+      "<th><i class='bi bi-calculator'></i> Total</th>",
+      "<th><i class='bi bi-pie-chart'></i> (%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
@@ -1448,15 +1447,17 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (TÍTULO ANTES DA LINHA PRETA + LEGENDA LIMPA)
+# 8. ESTILO CSS E ESTRUTURA HTML (LEGENDA DENTRO DOS FILTROS + TABELA ESTILO DT)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
+  @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css');
+
   .painel-fluxo-alf {
     max-width: 950px;
     width: 100%;
     margin: 20px auto;
-    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: #ffffff;
     box-sizing: border-box;
   }
@@ -1484,7 +1485,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     cursor: pointer !important;
   }
 
-  /* 1. Título Principal ACIMA da linha preta da barra de controles! */
+  /* 1. Título Principal ACIMA da linha preta da barra de controles */
   .titulo-grafico-alf {
     color: ", titulo_cor, ";
     font-size: ", titulo_tamanho, "px;
@@ -1494,34 +1495,35 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     line-height: 1.25;
   }
 
-  /* 2. Barra de Controles com a linha preta superior */
+  /* 2. Caixa Única de Controles + Legenda (Saídas, Entradas e Diferença ficam dentro na linha de baixo!) */
   .barra-controles-alf {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px 16px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     background: #fcfcfc;
     border: 1px solid #e0e0e0;
     border-top: 2px solid #000000;
     border-radius: 0 0 10px 10px;
   }
-
-  /* 3. Legenda Limpa (Saídas, Entradas, Diferença) sem caixinhas/bordas ao redor */
-  .cabecalho-grafico-alf {
-    text-align: left;
-    padding: 0 2px;
-    margin-bottom: 6px;
-  }
-  .linha-legendas-topo-alf {
+  .linha-filtros-sup-alf {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     width: 100%;
+  }
+  .linha-legendas-inf-alf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid #eaeaea;
   }
   .legenda-custom-alf {
     display: flex;
@@ -1551,10 +1553,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 5px 12px;
+    padding: 4px 12px;
     font-size: 11.5px;
     color: #1e293b;
   }
@@ -1686,19 +1688,19 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     CARD INFERIOR ESTILO ABNT PURO (SEM BORDAS DESTONANTES)
+     CARD INFERIOR E TABELA COM O EXATO ESTILO DA SUA TABELA DT
      ========================================================= */
   .card-hover-mobile-alf {
     display: none;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 12px;
-    padding: 14px 18px;
+    margin-top: 14px;
+    padding: 16px 18px;
     background: #ffffff;
     border: 1px solid #e0e0e0;
     border-top: 2px solid #000000;
-    border-radius: 0 0 10px 10px;
-    font-size: 12px;
+    border-radius: 0 0 12px 12px;
+    font-size: 13px;
     line-height: 1.45;
     color: #000000;
     text-align: left;
@@ -1759,10 +1761,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #64748b;
-    margin: 0 0 6px 0;
+    margin: 0 0 8px 0;
   }
   .secao-resumo-estatistico {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
   .barra-metricas-card {
     display: flex;
@@ -1794,111 +1796,96 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-weight: 700;
   }
 
-  /* Tabela em estilo ABNT limpo (apenas linhas horizontais, sem barra vertical presa) */
-  .wrapper-tabela-card {
+  /* =========================================================
+     ESTILO IDÊNTICO À SUA TABELA DT (image_4d5438.png)
+     ========================================================= */
+  .wrapper-tabela-dt-alf {
     width: 100%;
     overflow-x: auto;
   }
-  .tabela-resumo-card {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
+  table.tabela-estilo-dt-alf {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-size: 13px !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
   }
-  .tabela-resumo-card thead th {
-    text-align: center;
-    font-weight: 700;
-    color: #000000;
-    background: #ffffff;
-    padding: 8px 10px;
-    border-top: 1.5px solid #000000;
-    border-bottom: 1px solid #000000;
-    white-space: nowrap;
+  table.tabela-estilo-dt-alf thead th {
+    border: none !important;
+    text-transform: none !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    color: #111111 !important;
+    position: relative !important;
+    padding: 10px 10px 20px 10px !important;
+    background: transparent !important;
+    text-align: center !important;
+    white-space: nowrap !important;
   }
-  .tabela-resumo-card td {
-    text-align: center;
-    padding: 7px 10px;
-    border-bottom: 1px solid #f0f0f0;
-    color: #222222;
-    vertical-align: middle;
+  table.tabela-estilo-dt-alf thead th i {
+    margin-right: 5px !important;
+    font-size: 14px !important;
+    color: #444444 !important;
   }
-  .tabela-resumo-card .cel-mesclada,
-  .tabela-resumo-card .cel-mesclada-sub {
-    background: #ffffff;
-    vertical-align: middle;
+  /* A barra preta individual de 80% embaixo de cada cabeçalho (idêntica à sua DT!) */
+  table.tabela-estilo-dt-alf thead th::after {
+    content: '' !important;
+    position: absolute !important;
+    left: 10% !important;
+    bottom: 0 !important;
+    width: 80% !important;
+    height: 2px !important;
+    background-color: #000000 !important;
+    border-radius: 4px !important;
   }
-  .tabela-resumo-card tr.fim-subitem-row td {
-    border-bottom: 1px solid #e5e7eb;
+
+  /* Células do corpo com grade fina #e0e0e0 e fundo branco puro */
+  table.tabela-estilo-dt-alf tbody tr td {
+    padding: 11px 12px !important;
+    border-top: none !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    border-right: 1px solid #e0e0e0 !important;
+    border-left: none !important;
+    background-color: #ffffff !important;
+    color: #222222 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
   }
-  .tabela-resumo-card tr.fim-grupo-row td {
-    border-bottom: 1px solid #cccccc;
+  /* Apenas a 1ª coluna da esquerda leva border-left para não duplicar bordas */
+  table.tabela-estilo-dt-alf tbody tr td.cel-primeira-col {
+    border-left: 1px solid #e0e0e0 !important;
   }
-  .tabela-resumo-card tr.linha-total-card td {
-    background: #fcfcfc;
-    border-top: 1px solid #000000;
-    border-bottom: 1.5px solid #000000;
-    font-weight: 700;
-    color: #000000;
-    padding: 8px 10px;
+  /* Hover suave na linha */
+  table.tabela-estilo-dt-alf tbody tr:hover td {
+    background-color: #f9f9f9 !important;
   }
-  .detalhes-extras-card {
-    display: inline-block;
-    text-align: center;
+  /* Linha final de Total com cantos arredondados de 12px embaixo */
+  table.tabela-estilo-dt-alf tbody tr.linha-total-dt td {
+    background-color: #fcfcfc !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    color: #000000 !important;
   }
-  .detalhes-extras-card summary {
-    cursor: pointer;
-    list-style: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+  table.tabela-estilo-dt-alf tbody tr.linha-total-dt td:first-child {
+    border-bottom-left-radius: 12px !important;
   }
-  .detalhes-extras-card summary::-webkit-details-marker {
-    display: none;
+  table.tabela-estilo-dt-alf tbody tr.linha-total-dt td:last-child {
+    border-bottom-right-radius: 12px !important;
   }
-  .pilula-ver-mais {
-    color: #03045e;
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    padding: 1px 8px;
-    font-size: 10.5px;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-  }
-  .pilula-ver-mais:hover {
-    background: #000000;
-    color: #ffffff;
-    border-color: #000000;
-  }
-  .lista-oculta-card {
-    margin-top: 6px;
-    padding: 6px 10px;
-    background: #fcfcfc;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 11px;
-    color: #333333;
-    text-align: left;
-    min-width: 210px;
-  }
-  .item-lista-oculta {
+
+  /* Formatação de moeda R$ alinhada igual à coluna Valor da sua tabela DT */
+  .celula-moeda-alf {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    padding: 2px 0;
-    border-bottom: 1px dashed #eeeeee;
-  }
-  .item-lista-oculta:last-child {
-    border-bottom: none;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 82px;
+    white-space: nowrap;
   }
   .badge-n {
     color: #64748b;
     font-weight: 600;
-    font-size: 11px;
-  }
-  .tabela-resumo-card .col-num {
-    text-align: center;
-    white-space: nowrap;
+    font-size: 11.5px;
   }
 
   /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot */
@@ -1915,8 +1902,11 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     }
     .barra-controles-alf {
       padding: 9px 11px;
-      gap: 7px;
+      gap: 8px;
       margin-bottom: 10px;
+    }
+    .linha-filtros-sup-alf {
+      gap: 7px;
     }
     .grupo-controle-alf {
       width: 100%;
@@ -1944,6 +1934,9 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       font-size: 10.5px;
       padding: 4px 7px;
     }
+    .linha-legendas-inf-alf {
+      padding-top: 8px;
+    }
     .legenda-custom-alf {
       flex-direction: column;
       align-items: flex-start;
@@ -1964,18 +1957,22 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       padding: 5px 9px;
     }
     .card-hover-mobile-alf {
-      padding: 10px 12px;
+      padding: 12px 12px;
     }
     .aba-mob-alf {
       font-size: 11px;
       padding: 5px 10px;
     }
-    .tabela-resumo-card {
-      font-size: 11px;
+    table.tabela-estilo-dt-alf {
+      font-size: 11.5px !important;
+      white-space: nowrap !important;
     }
-    .tabela-resumo-card th,
-    .tabela-resumo-card td {
-      padding: 5px 7px;
+    table.tabela-estilo-dt-alf thead th {
+      font-size: 12px !important;
+      padding: 8px 8px 16px 8px !important;
+    }
+    table.tabela-estilo-dt-alf tbody tr td {
+      padding: 8px 9px !important;
     }
     .barra-metricas-card {
       gap: 6px;
@@ -1992,64 +1989,64 @@ opcoes_html_mes <- purrr::map(meses_disponiveis, function(m) {
   htmltools::tags$option(value = m, m)
 })
 
-# Título separado para entrar ANTES da barra de controles com linha preta!
+# 1. Título Principal ACIMA da linha preta
 titulo_topo_html <- htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome)
 
-controles_html <- htmltools::tags$div(
+# 2. Caixa Única: Filtros na linha de cima + Saídas, Entradas e Diferença na linha de baixo!
+controles_e_legenda_html <- htmltools::tags$div(
   class = "barra-controles-alf",
   
-  # 1. Seletor de Período
+  # Linha Superior: Período | Usuário | Visão
   htmltools::tags$div(
-    class = "grupo-controle-alf",
-    htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-calendar3'></i> Período:")),
-    htmltools::tags$select(class = "select-mes-alf", opcoes_html_mes)
-  ),
-  
-  # 2. Seletor de Usuário (Todos + Fotos Redondas)
-  htmltools::tags$div(
-    class = "grupo-controle-alf",
-    htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-people'></i> Usuário:")),
+    class = "linha-filtros-sup-alf",
+    
     htmltools::tags$div(
-      style = "display: inline-flex; align-items: center; gap: 6px;",
-      htmltools::tags$button(type = "button", class = "btn-usuario-alf texto-todos ativo", `data-usuario` = "Todos", "Todos"),
-      htmltools::tags$button(type = "button", class = "btn-usuario-alf", `data-usuario` = "Alex", htmltools::tags$img(src = uri_alex, alt = "Alex")),
-      htmltools::tags$button(type = "button", class = "btn-usuario-alf", `data-usuario` = "Leticia", htmltools::tags$img(src = uri_leticia, alt = "Letícia"))
-    )
-  ),
-  
-  # 3. Seletor de Visão (3 Gráficos: Empilhado, Linhas e Boxplot!)
-  htmltools::tags$div(
-    class = "grupo-controle-alf",
-    htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-bar-chart-line'></i> Visão:")),
+      class = "grupo-controle-alf",
+      htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-calendar3'></i> Período:")),
+      htmltools::tags$select(class = "select-mes-alf", opcoes_html_mes)
+    ),
+    
     htmltools::tags$div(
-      style = "display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;",
-      htmltools::tags$button(
-        type = "button",
-        class = "btn-modo-alf ativo",
-        `data-modo` = "barras",
-        htmltools::HTML("<i class='bi bi-bar-chart-steps'></i> Empilhado")
-      ),
-      htmltools::tags$button(
-        type = "button",
-        class = "btn-modo-alf",
-        `data-modo` = "linhas",
-        htmltools::HTML("<i class='bi bi-graph-up'></i> Linhas")
-      ),
-      htmltools::tags$button(
-        type = "button",
-        class = "btn-modo-alf",
-        `data-modo` = "boxplot",
-        htmltools::HTML("<i class='bi bi-distribute-vertical'></i> Boxplot")
+      class = "grupo-controle-alf",
+      htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-people'></i> Usuário:")),
+      htmltools::tags$div(
+        style = "display: inline-flex; align-items: center; gap: 6px;",
+        htmltools::tags$button(type = "button", class = "btn-usuario-alf texto-todos ativo", `data-usuario` = "Todos", "Todos"),
+        htmltools::tags$button(type = "button", class = "btn-usuario-alf", `data-usuario` = "Alex", htmltools::tags$img(src = uri_alex, alt = "Alex")),
+        htmltools::tags$button(type = "button", class = "btn-usuario-alf", `data-usuario` = "Leticia", htmltools::tags$img(src = uri_leticia, alt = "Letícia"))
+      )
+    ),
+    
+    htmltools::tags$div(
+      class = "grupo-controle-alf",
+      htmltools::tags$span(class = "rotulo-controle-alf", htmltools::HTML("<i class='bi bi-bar-chart-line'></i> Visão:")),
+      htmltools::tags$div(
+        style = "display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;",
+        htmltools::tags$button(
+          type = "button",
+          class = "btn-modo-alf ativo",
+          `data-modo` = "barras",
+          htmltools::HTML("<i class='bi bi-bar-chart-steps'></i> Empilhado")
+        ),
+        htmltools::tags$button(
+          type = "button",
+          class = "btn-modo-alf",
+          `data-modo` = "linhas",
+          htmltools::HTML("<i class='bi bi-graph-up'></i> Linhas")
+        ),
+        htmltools::tags$button(
+          type = "button",
+          class = "btn-modo-alf",
+          `data-modo` = "boxplot",
+          htmltools::HTML("<i class='bi bi-distribute-vertical'></i> Boxplot")
+        )
       )
     )
-  )
-)
-
-# Legenda limpa (sem caixinhas com linha preta em cima) logo abaixo da barra de controles
-cabecalho_html <- htmltools::tags$div(
-  class = "cabecalho-grafico-alf",
+  ),
+  
+  # Linha Inferior (dentro da mesma caixa): Saídas | Entradas | Diferença + Legenda Boxplot
   htmltools::tags$div(
-    class = "linha-legendas-topo-alf",
+    class = "linha-legendas-inf-alf",
     htmltools::tags$div(
       class = "legenda-custom-alf",
       htmltools::tags$span(
@@ -2090,7 +2087,7 @@ cabecalho_html <- htmltools::tags$div(
 )
 
 # ==============================================================================
-# 9. OBJETO FINAL (ORDEM: TÍTULO -> BARRA PRETA DE FILTROS -> LEGENDA -> GRÁFICO)
+# 9. OBJETO FINAL
 # ==============================================================================
 
 grafico_fluxo <- htmltools::tagList(
@@ -2098,8 +2095,7 @@ grafico_fluxo <- htmltools::tagList(
   htmltools::tags$div(
     class = "painel-fluxo-alf",
     titulo_topo_html,
-    controles_html,
-    cabecalho_html,
+    controles_e_legenda_html,
     htmltools::tags$div(class = "grafico-scroll", grafico),
     htmltools::tags$div(class = "card-hover-mobile-alf")
   )
