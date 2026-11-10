@@ -4,21 +4,31 @@
 # 3 Visões integradas:
 #   1. Empilhado (Barras com cantos arredondados)
 #   2. Linhas (Linhas finas + bolinhas pretas ao selecionar)
-#   3. Boxplot (2 boxplots por mês: 1 de Entrada e 1 de Saída, com média tracejada)
-# Destaque de seleção com faixa vertical cinza no fundo (sem borda na barra),
-# 1ª linha do hover toda na cor da série e hover mobile 100% funcional.
+#   3. Boxplot (Pontos com cor própria + hover Dia/Valor, Outliers destacados
+#      com rótulo à direita, e linha/rótulo da Média em cor diferenciada)
+# No Mobile: Apenas o Card inferior ao clicar (sem balão em cima do gráfico).
+# No PC: Hover estilizado + Card interativo inferior ao clicar na coluna.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
 # ==============================================================================
 
-titulo_nome     <- "Fluxo Financeiro: Entradas e Saídas (por data de pagamento)"
+titulo_nome     <- "Fluxo Financeiro: Entradas e Saídas por data de pagamento"
 titulo_cor      <- "#03045e"
 titulo_tamanho  <- 16
 
-# Cores das séries
-cor_entradas    <- "#29b6d8"   # Azul Ciano Vibrante
-cor_saidas      <- "#1b78a1"   # Azul Oceano Escuro
+# Cores das séries (Caixas / Barras / Linhas)
+cor_entradas         <- "#29b6d8"   # Azul Ciano Vibrante
+cor_saidas           <- "#1b78a1"   # Azul Oceano Escuro
+
+# Cores exclusivas para os elementos do Boxplot
+cor_ponto_entradas   <- "#005082"   # Azul profundo (diferente da caixa ciano)
+cor_ponto_saidas     <- "#03045e"   # Azul marinho escuro (diferente da caixa oceano)
+cor_outlier          <- "#e11d48"   # Vermelho/Coral vibrante para Outliers
+cor_media_box        <- "#d97706"   # Âmbar/Dourado escuro para a linha e rótulo da Média
+
+# Cor da sombra de seleção no fundo (bem clarinha e suave)
+cor_sombra_selecao   <- "rgba(226, 232, 240, 0.45)"
 
 tamanho_rotulos <- 10.5
 cor_rotulos     <- "#000000"
@@ -26,7 +36,7 @@ tamanho_eixo_x  <- 11
 cor_eixo_x      <- "#000000"
 tamanho_legenda <- 12.5
 
-# Balão de Hover
+# Balão de Hover no PC
 hover_bg_cor      <- "#FFFFFF"
 hover_txt_cor     <- "#000000"
 hover_fonte_tam   <- 12
@@ -124,7 +134,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER (BARRAS/LINHAS E BOXPLOT ESTATÍSTICO)
+# 4. FUNÇÕES DE HOVER (1ª LINHA TODA EM AZUL INCLUINDO O n = X)
 # ==============================================================================
 
 montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel, compacto = FALSE) {
@@ -132,11 +142,11 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel, compacto 
   n_lanc     <- base::nrow(df_sub)
   tam_topo   <- if (compacto) "12px" else "13px"
   
-  # 1ª linha inteira (Data/Mês | R$ Valor) na cor da série, e (n = X) em preto
+  # 1ª linha inteira (Data/Mês | R$ Valor (n = X)) toda na cor azul da série!
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
     return(base::paste0(
       "<b style='color:", cor_titulo, "; font-size:", tam_topo, ";'>",
-      titulo_periodo, " | R$ 0,00</b> <span style='color:#000000;'>(n = 0)</span>"
+      titulo_periodo, " | R$ 0,00 (n = 0)</b>"
     ))
   }
   
@@ -145,13 +155,12 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel, compacto 
   val_max   <- base::max(df_sub$valor, na.rm = TRUE)
   val_min   <- base::min(df_sub$valor, na.rm = TRUE)
   
-  lim_chars <- if (compacto) 20 else 34
+  lim_chars <- if (compacto) 22 else 34
   qtd_top   <- if (compacto) 4 else 5
   
   cabecalho <- base::paste0(
     "<b style='color:", cor_titulo, "; font-size:", tam_topo, ";'>",
-    titulo_periodo, " | R$ ", formatar_brl(val_total),
-    "</b> <span style='color:#000000;'>(n = ", n_lanc, ")</span><br>"
+    titulo_periodo, " | R$ ", formatar_brl(val_total), " (n = ", n_lanc, ")</b><br>"
   )
   
   if (tipo_sel == "Saídas") {
@@ -203,7 +212,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel, compacto 
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# Hover estatístico específico para o Boxplot (Quartis, Mediana, IIQ, Média, Máx, Mín)
+# Hover estatístico da Caixa do Boxplot (também com o n = X em azul)
 montar_hover_boxplot <- function(df_sub, titulo_periodo, tipo_sel) {
   cor_titulo <- base::ifelse(tipo_sel == "Entradas", cor_entradas, cor_saidas)
   n_lanc     <- base::nrow(df_sub)
@@ -211,7 +220,7 @@ montar_hover_boxplot <- function(df_sub, titulo_periodo, tipo_sel) {
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
     return(base::paste0(
       "<b style='color:", cor_titulo, "; font-size:13px;'>",
-      titulo_periodo, " | R$ 0,00</b> <span style='color:#000000;'>(n = 0)</span>"
+      titulo_periodo, " | R$ 0,00 (n = 0)</b>"
     ))
   }
   
@@ -227,15 +236,14 @@ montar_hover_boxplot <- function(df_sub, titulo_periodo, tipo_sel) {
   
   base::paste0(
     "<b style='color:", cor_titulo, "; font-size:13px;'>",
-    titulo_periodo, " | R$ ", formatar_brl(val_total),
-    "</b> <span style='color:#000000;'>(n = ", n_lanc, ")</span><br><br>",
+    titulo_periodo, " | R$ ", formatar_brl(val_total), " (n = ", n_lanc, ")</b><br><br>",
     "<b>Resumo do Boxplot (", tipo_sel, "):</b><br>",
     "• <b>Mediana (Q2):</b> R$ ", formatar_brl(val_med), "<br>",
     "• <b>1º Quartil (25%):</b> R$ ", formatar_brl(val_q1), "<br>",
     "• <b>3º Quartil (75%):</b> R$ ", formatar_brl(val_q3), "<br>",
     "• <b>Amplitude Interquartil (IIQ):</b> R$ ", formatar_brl(val_iiq), "<br><br>",
     "<span style='color:#444444; font-size:11px'>",
-    "<b>Média:</b> R$ ", formatar_brl(val_media),
+    "<b style='color:", cor_media_box, ";'>Média: R$ ", formatar_brl(val_media), "</b>",
     " | <b>Máx:</b> R$ ", formatar_brl(val_max),
     " | <b>Mín:</b> R$ ", formatar_brl(val_min),
     "</span>"
@@ -244,7 +252,7 @@ montar_hover_boxplot <- function(df_sub, titulo_periodo, tipo_sel) {
 
 
 # ==============================================================================
-# 5. GERADOR DE CAMADAS (BARRAS, LINHAS E BOXPLOT POR PERÍODO E USUÁRIO)
+# 5. GERADOR DE CAMADAS (BARRAS, LINHAS E BOXPLOT CUSTOMIZADO COM OUTLIERS/MÉDIA)
 # ==============================================================================
 
 gerar_par_traces <- function(mes_sel, usuario_sel) {
@@ -267,14 +275,42 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       eixo_x = if (usar_ano) base::paste0("<b>", mes_label, "</b>") else base::paste0("<b>", mes_nome, "</b>")
     )
   
-  # Vetores para alimentar o Boxplot (pontos individuais em cada mês)
-  box_cats   <- base::as.character(escopo_meses$eixo_x)
-  box_e_x    <- base::character(0)
-  box_e_y    <- base::numeric(0)
-  box_e_hov  <- base::character(0)
-  box_s_x    <- base::character(0)
-  box_s_y    <- base::numeric(0)
-  box_s_hov  <- base::character(0)
+  # Vetores para alimentar o Boxplot + Pontos Individuais + Outliers + Média
+  box_cats      <- base::as.character(escopo_meses$eixo_x)
+  box_e_x       <- base::character(0)
+  box_e_y       <- base::numeric(0)
+  box_s_x       <- base::character(0)
+  box_s_y       <- base::numeric(0)
+  
+  # Vetores dos pontos individuais do Boxplot (Hover com Dia e Valor + Outliers destacados)
+  pts_e_x       <- base::numeric(0)
+  pts_e_y       <- base::numeric(0)
+  pts_e_hov     <- base::character(0)
+  pts_e_cor     <- base::character(0)
+  pts_e_tam     <- base::numeric(0)
+  pts_e_lbl     <- base::character(0)
+  
+  pts_s_x       <- base::numeric(0)
+  pts_s_y       <- base::numeric(0)
+  pts_s_hov     <- base::character(0)
+  pts_s_cor     <- base::character(0)
+  pts_s_tam     <- base::numeric(0)
+  pts_s_lbl     <- base::character(0)
+  
+  # Vetores para a Linha e Rótulo da Média de cada Boxplot
+  med_e_x0      <- base::numeric(0)
+  med_e_x1      <- base::numeric(0)
+  med_e_xr      <- base::numeric(0)
+  med_e_y       <- base::numeric(0)
+  med_e_txt     <- base::character(0)
+  med_e_hov     <- base::character(0)
+  
+  med_s_x0      <- base::numeric(0)
+  med_s_x1      <- base::numeric(0)
+  med_s_xr      <- base::numeric(0)
+  med_s_y       <- base::numeric(0)
+  med_s_txt     <- base::character(0)
+  med_s_hov     <- base::character(0)
   
   box_res_e_y   <- base::numeric(base::nrow(escopo_meses))
   box_res_s_y   <- base::numeric(base::nrow(escopo_meses))
@@ -282,9 +318,10 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   box_res_s_hov <- base::character(base::nrow(escopo_meses))
   
   for (i in base::seq_len(base::nrow(escopo_meses))) {
-    m_ref <- escopo_meses$mes_ref[i]
-    m_lbl <- escopo_meses$mes_label[i]
-    cat_x <- escopo_meses$eixo_x[i]
+    idx_zero <- i - 1 # Índice 0-based no eixo X numérico do Boxplot
+    m_ref    <- escopo_meses$mes_ref[i]
+    m_lbl    <- escopo_meses$mes_label[i]
+    cat_x    <- escopo_meses$eixo_x[i]
     
     sub_e <- d %>% dplyr::filter(mes_ref == m_ref, tipo == "Entradas")
     sub_s <- d %>% dplyr::filter(mes_ref == m_ref, tipo == "Saídas")
@@ -294,15 +331,91 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     box_res_e_hov[i] <- montar_hover_boxplot(sub_e, m_lbl, "Entradas")
     box_res_s_hov[i] <- montar_hover_boxplot(sub_s, m_lbl, "Saídas")
     
+    # --- ENTRADAS NO MÊS i (Centro da caixa em idx_zero - 0.19) ---
     if (base::nrow(sub_e) > 0) {
-      box_e_x   <- base::c(box_e_x, base::rep(cat_x, base::nrow(sub_e)))
-      box_e_y   <- base::c(box_e_y, sub_e$valor)
-      box_e_hov <- base::c(box_e_hov, base::rep(box_res_e_hov[i], base::nrow(sub_e)))
+      vals_e <- sub_e$valor
+      q1_e   <- stats::quantile(vals_e, 0.25, na.rm = TRUE, names = FALSE)
+      q3_e   <- stats::quantile(vals_e, 0.75, na.rm = TRUE, names = FALSE)
+      iiq_e  <- q3_e - q1_e
+      lim_sup_e <- q3_e + 1.5 * iiq_e
+      lim_inf_e <- q1_e - 1.5 * iiq_e
+      eh_out_e  <- (vals_e > lim_sup_e | vals_e < lim_inf_e) & (iiq_e > 0)
+      
+      # Jitter horizontal determinístico suave para pontos não colidirem
+      n_e <- base::nrow(sub_e)
+      desloc_e <- if (n_e == 1) 0 else base::seq(-0.045, 0.045, length.out = n_e)
+      x_pts_e  <- (idx_zero - 0.19) + base::ifelse(eh_out_e, 0, desloc_e)
+      
+      hov_ind_e <- base::paste0(
+        "<b style='color:", base::ifelse(eh_out_e, cor_outlier, cor_entradas), "; font-size:13px;'>",
+        base::format(sub_e$data, "%d/%m/%Y"), " | R$ ", formatar_brl(vals_e),
+        base::ifelse(eh_out_e, " (Outlier)", ""), "</b><br>",
+        "• <b>Fonte:</b> ", sub_e$grupo_1, "<br>",
+        "• <b>Descrição:</b> ", sub_e$grupo_2
+      )
+      
+      lbl_out_e <- base::ifelse(eh_out_e, base::paste0(" <b>R$ ", formatar_brl_curto(vals_e), "</b>"), "")
+      lbl_out_e <- base::gsub("<b>R\\$ <b>R\\$ ", "<b>R$ ", lbl_out_e)
+      
+      box_e_x   <- base::c(box_e_x, base::rep(cat_x, n_e))
+      box_e_y   <- base::c(box_e_y, vals_e)
+      pts_e_x   <- base::c(pts_e_x, x_pts_e)
+      pts_e_y   <- base::c(pts_e_y, vals_e)
+      pts_e_hov <- base::c(pts_e_hov, hov_ind_e)
+      pts_e_cor <- base::c(pts_e_cor, base::ifelse(eh_out_e, cor_outlier, cor_ponto_entradas))
+      pts_e_tam <- base::c(pts_e_tam, base::ifelse(eh_out_e, 8.5, 6.5))
+      pts_e_lbl <- base::c(pts_e_lbl, lbl_out_e)
+      
+      val_med_e <- base::mean(vals_e, na.rm = TRUE)
+      med_e_x0  <- base::c(med_e_x0, idx_zero - 0.32)
+      med_e_x1  <- base::c(med_e_x1, idx_zero - 0.06)
+      med_e_xr  <- base::c(med_e_xr, idx_zero - 0.05)
+      med_e_y   <- base::c(med_e_y, val_med_e)
+      med_e_txt <- base::c(med_e_txt, base::paste0(" <b>Méd: R$ ", base::formatC(val_med_e, format = "f", digits = 0, big.mark = ".", decimal.mark = ","), "</b>"))
+      med_e_hov <- base::c(med_e_hov, base::paste0("<b style='color:", cor_media_box, ";'>Média Entradas (", m_lbl, "): R$ ", formatar_brl(val_med_e), "</b>"))
     }
+    
+    # --- SAÍDAS NO MÊS i (Centro da caixa em idx_zero + 0.19) ---
     if (base::nrow(sub_s) > 0) {
-      box_s_x   <- base::c(box_s_x, base::rep(cat_x, base::nrow(sub_s)))
-      box_s_y   <- base::c(box_s_y, sub_s$valor)
-      box_s_hov <- base::c(box_s_hov, base::rep(box_res_s_hov[i], base::nrow(sub_s)))
+      vals_s <- sub_s$valor
+      q1_s   <- stats::quantile(vals_s, 0.25, na.rm = TRUE, names = FALSE)
+      q3_s   <- stats::quantile(vals_s, 0.75, na.rm = TRUE, names = FALSE)
+      iiq_s  <- q3_s - q1_s
+      lim_sup_s <- q3_s + 1.5 * iiq_s
+      lim_inf_s <- q1_s - 1.5 * iiq_s
+      eh_out_s  <- (vals_s > lim_sup_s | vals_s < lim_inf_s) & (iiq_s > 0)
+      
+      n_s <- base::nrow(sub_s)
+      desloc_s <- if (n_s == 1) 0 else base::seq(-0.045, 0.045, length.out = n_s)
+      x_pts_s  <- (idx_zero + 0.19) + base::ifelse(eh_out_s, 0, desloc_s)
+      
+      hov_ind_s <- base::paste0(
+        "<b style='color:", base::ifelse(eh_out_s, cor_outlier, cor_saidas), "; font-size:13px;'>",
+        base::format(sub_s$data, "%d/%m/%Y"), " | R$ ", formatar_brl(vals_s),
+        base::ifelse(eh_out_s, " (Outlier)", ""), "</b><br>",
+        "• <b>Forma Pgto:</b> ", sub_s$grupo_1, "<br>",
+        "• <b>Tipo Despesa:</b> ", sub_s$grupo_2
+      )
+      
+      lbl_out_s <- base::ifelse(eh_out_s, base::paste0(" <b>R$ ", formatar_brl_curto(vals_s), "</b>"), "")
+      lbl_out_s <- base::gsub("<b>R\\$ <b>R\\$ ", "<b>R$ ", lbl_out_s)
+      
+      box_s_x   <- base::c(box_s_x, base::rep(cat_x, n_s))
+      box_s_y   <- base::c(box_s_y, vals_s)
+      pts_s_x   <- base::c(pts_s_x, x_pts_s)
+      pts_s_y   <- base::c(pts_s_y, vals_s)
+      pts_s_hov <- base::c(pts_s_hov, hov_ind_s)
+      pts_s_cor <- base::c(pts_s_cor, base::ifelse(eh_out_s, cor_outlier, cor_ponto_saidas))
+      pts_s_tam <- base::c(pts_s_tam, base::ifelse(eh_out_s, 8.5, 6.5))
+      pts_s_lbl <- base::c(pts_s_lbl, lbl_out_s)
+      
+      val_med_s <- base::mean(vals_s, na.rm = TRUE)
+      med_s_x0  <- base::c(med_s_x0, idx_zero + 0.06)
+      med_s_x1  <- base::c(med_s_x1, idx_zero + 0.32)
+      med_s_xr  <- base::c(med_s_xr, idx_zero + 0.33)
+      med_s_y   <- base::c(med_s_y, val_med_s)
+      med_s_txt <- base::c(med_s_txt, base::paste0(" <b>Méd: R$ ", base::formatC(val_med_s, format = "f", digits = 0, big.mark = ".", decimal.mark = ","), "</b>"))
+      med_s_hov <- base::c(med_s_hov, base::paste0("<b style='color:", cor_media_box, ";'>Média Saídas (", m_lbl, "): R$ ", formatar_brl(val_med_s), "</b>"))
     }
   }
   
@@ -412,10 +525,32 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     box_cats      = base::as.character(box_cats),
     box_e_x       = base::as.character(box_e_x),
     box_e_y       = base::as.numeric(box_e_y),
-    box_e_hov     = base::as.character(box_e_hov),
     box_s_x       = base::as.character(box_s_x),
     box_s_y       = base::as.numeric(box_s_y),
-    box_s_hov     = base::as.character(box_s_hov),
+    pts_e_x       = base::as.numeric(pts_e_x),
+    pts_e_y       = base::as.numeric(pts_e_y),
+    pts_e_hov     = base::as.character(pts_e_hov),
+    pts_e_cor     = base::as.character(pts_e_cor),
+    pts_e_tam     = base::as.numeric(pts_e_tam),
+    pts_e_lbl     = base::as.character(pts_e_lbl),
+    pts_s_x       = base::as.numeric(pts_s_x),
+    pts_s_y       = base::as.numeric(pts_s_y),
+    pts_s_hov     = base::as.character(pts_s_hov),
+    pts_s_cor     = base::as.character(pts_s_cor),
+    pts_s_tam     = base::as.numeric(pts_s_tam),
+    pts_s_lbl     = base::as.character(pts_s_lbl),
+    med_e_x0      = base::as.numeric(med_e_x0),
+    med_e_x1      = base::as.numeric(med_e_x1),
+    med_e_xr      = base::as.numeric(med_e_xr),
+    med_e_y       = base::as.numeric(med_e_y),
+    med_e_txt     = base::as.character(med_e_txt),
+    med_e_hov     = base::as.character(med_e_hov),
+    med_s_x0      = base::as.numeric(med_s_x0),
+    med_s_x1      = base::as.numeric(med_s_x1),
+    med_s_xr      = base::as.numeric(med_s_xr),
+    med_s_y       = base::as.numeric(med_s_y),
+    med_s_txt     = base::as.character(med_s_txt),
+    med_s_hov     = base::as.character(med_s_hov),
     box_res_e_y   = base::as.numeric(box_res_e_y),
     box_res_s_y   = base::as.numeric(box_res_s_y),
     box_res_e_hov = base::as.character(box_res_e_hov),
@@ -448,7 +583,7 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (SOMBRA CINZA + 3 VISÕES)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
@@ -472,7 +607,7 @@ function(el, x) {
   const legSaidas     = painel.querySelector('.leg-texto-saidas');
   const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
   const quadDiferenca = painel.querySelector('.quadrado-diferenca');
-  const cardMobile    = painel.querySelector('.card-hover-mobile-alf');
+  const cardDetalhes  = painel.querySelector('.card-hover-mobile-alf');
 
   function formatarMoedaJS(v) {
     return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -482,27 +617,27 @@ function(el, x) {
     return (modoAtual === 'boxplot') ? (d.box_cats || []) : (d.x || []);
   }
 
-  function atualizarCardMobile(d) {
-    if (!cardMobile) return;
-    const isMobile = window.innerWidth <= 768;
+  // Abre o Card Interativo com abas Entradas/Saídas tanto no Mobile quanto no PC ao clicar!
+  function atualizarCardInterativo(d) {
+    if (!cardDetalhes) return;
     const cats = obterCategoriasAtuais(d);
 
-    if (!isMobile || indiceClicado === null || !cats.length || indiceClicado >= cats.length) {
-      cardMobile.style.display = 'none';
-      cardMobile.innerHTML = '';
+    if (indiceClicado === null || !cats.length || indiceClicado >= cats.length) {
+      cardDetalhes.style.display = 'none';
+      cardDetalhes.innerHTML = '';
       return;
     }
 
     const htmlE = (modoAtual === 'boxplot')
       ? (d.box_res_e_hov[indiceClicado] || '')
-      : (d.e_hover_mob[indiceClicado] || '');
+      : (d.e_hover[indiceClicado] || '');
     const htmlS = (modoAtual === 'boxplot')
       ? (d.box_res_s_hov[indiceClicado] || '')
-      : (d.s_hover_mob[indiceClicado] || '');
+      : (d.s_hover[indiceClicado] || '');
 
     const htmlAtivo = (serieClicada === 1) ? htmlS : htmlE;
 
-    cardMobile.innerHTML =
+    cardDetalhes.innerHTML =
       '<div class=\"topo-card-mobile-alf\">' +
         '<div class=\"abas-card-mobile-alf\">' +
           '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 0 ? 'ativa-e' : '') + '\" data-serie=\"0\">Entradas</button>' +
@@ -511,16 +646,16 @@ function(el, x) {
         '<button type=\"button\" class=\"fechar-card-mobile-alf\" title=\"Fechar\">&times;</button>' +
       '</div>' +
       '<div class=\"corpo-card-mobile-alf\">' + htmlAtivo + '</div>';
-    cardMobile.style.display = 'block';
+    cardDetalhes.style.display = 'block';
 
-    cardMobile.querySelectorAll('.aba-mob-alf').forEach(function(btnAba) {
+    cardDetalhes.querySelectorAll('.aba-mob-alf').forEach(function(btnAba) {
       btnAba.addEventListener('click', function() {
         serieClicada = parseInt(this.getAttribute('data-serie'), 10);
-        atualizarCardMobile(d);
+        atualizarCardInterativo(d);
       });
     });
 
-    const btnFechar = cardMobile.querySelector('.fechar-card-mobile-alf');
+    const btnFechar = cardDetalhes.querySelector('.fechar-card-mobile-alf');
     if (btnFechar) {
       btnFechar.addEventListener('click', function() {
         indiceClicado = null;
@@ -573,7 +708,7 @@ function(el, x) {
     const maxY      = ehBarra ? maxBar : (ehBox ? maxBox : maxLine);
 
     atualizarRotulosTopo(d);
-    atualizarCardMobile(d);
+    atualizarCardInterativo(d);
 
     const tamRotulo = isMobile ? 8.5 : ", tamanho_rotulos, ";
     const tamEixoX  = isMobile ? (qtdPontos > 6 ? 8.5 : 10) : ", tamanho_eixo_x, ";
@@ -581,11 +716,11 @@ function(el, x) {
     const alturaAtu = isMobile ? ", altura_grafico_mobile, " : ", altura_grafico, ";
     const raioAtu   = isMobile ? 5 : ", raio_cantos, ";
 
-    // Faixa cinza vertical no fundo da coluna selecionada (em Barras, Linhas e Boxplot!)
-    const shapesDestaque = [];
+    // Sombra de seleção bem clarinha no fundo + linhas da média no Boxplot
+    const shapesLayout = [];
     if (indiceClicado !== null && indiceClicado < qtdPontos) {
       const meiaLargura = ehLinha ? (qtdPontos > 8 ? 0.34 : 0.22) : 0.44;
-      shapesDestaque.push({
+      shapesLayout.push({
         type: 'rect',
         xref: 'x',
         yref: 'paper',
@@ -593,7 +728,7 @@ function(el, x) {
         x1: indiceClicado + meiaLargura,
         y0: 0,
         y1: 1,
-        fillcolor: 'rgba(148, 163, 184, 0.24)', // Sombra cinza elegante no fundo!
+        fillcolor: '", cor_sombra_selecao, "',
         line: { width: 0 },
         layer: 'below'
       });
@@ -602,46 +737,132 @@ function(el, x) {
     let tracesFinais = [];
 
     if (ehBox) {
-      // MODO 3: BOXPLOT (2 boxplots lado a lado por mês: Entradas e Saídas + Média tracejada)
+      // Mapa de categorias para índice numérico (permite posicionar pontos, outliers e média com precisão)
+      const mapaCat = {};
+      cats.forEach(function(c, idx) { mapaCat[c] = idx; });
+
+      const xBoxE = (d.box_e_x || []).map(function(c) { return (mapaCat[c] !== undefined ? mapaCat[c] : 0) - 0.19; });
+      const xBoxS = (d.box_s_x || []).map(function(c) { return (mapaCat[c] !== undefined ? mapaCat[c] : 0) + 0.19; });
+
+      // Linhas tracejadas da Média com cor própria diferenciada (#d97706)
+      const qtdMedE = (d.med_e_y || []).length;
+      for (let i = 0; i < qtdMedE; i++) {
+        shapesLayout.push({
+          type: 'line',
+          xref: 'x',
+          yref: 'y',
+          x0: d.med_e_x0[i],
+          x1: d.med_e_x1[i],
+          y0: d.med_e_y[i],
+          y1: d.med_e_y[i],
+          line: { color: '", cor_media_box, "', width: 2.2, dash: 'dot' }
+        });
+      }
+
+      const qtdMedS = (d.med_s_y || []).length;
+      for (let i = 0; i < qtdMedS; i++) {
+        shapesLayout.push({
+          type: 'line',
+          xref: 'x',
+          yref: 'y',
+          x0: d.med_s_x0[i],
+          x1: d.med_s_x1[i],
+          y0: d.med_s_y[i],
+          y1: d.med_s_y[i],
+          line: { color: '", cor_media_box, "', width: 2.2, dash: 'dot' }
+        });
+      }
+
+      // 1. Caixas de Entradas e Saídas (hover da caixa só no PC; no mobile usa o Card embaixo)
       const traceBoxE = {
         type: 'box',
-        x: d.box_e_x,
+        x: xBoxE,
         y: d.box_e_y,
         name: 'Entradas',
-        offsetgroup: 'E',
-        alignmentgroup: 'meses',
-        boxmean: true, // Linha tracejada da Média dentro de cada caixa de Entrada
-        boxpoints: 'all',
-        jitter: 0.32,
-        pointpos: 0,
-        fillcolor: 'rgba(41, 182, 216, 0.50)',
+        width: 0.26,
+        boxpoints: false,
+        fillcolor: 'rgba(41, 182, 216, 0.45)',
         line: { color: '", cor_entradas, "', width: 1.8 },
-        marker: { color: '", cor_entradas, "', size: isMobile ? 5.5 : 6.5, opacity: 0.85 },
-        hoverinfo: 'text',
-        text: d.box_e_hov,
-        hoveron: 'boxes+points'
+        hoverinfo: isMobile ? 'none' : 'y'
       };
 
       const traceBoxS = {
         type: 'box',
-        x: d.box_s_x,
+        x: xBoxS,
         y: d.box_s_y,
         name: 'Saídas',
-        offsetgroup: 'S',
-        alignmentgroup: 'meses',
-        boxmean: true, // Linha tracejada da Média dentro de cada caixa de Saída
-        boxpoints: 'all',
-        jitter: 0.32,
-        pointpos: 0,
-        fillcolor: 'rgba(27, 120, 161, 0.50)',
+        width: 0.26,
+        boxpoints: false,
+        fillcolor: 'rgba(27, 120, 161, 0.45)',
         line: { color: '", cor_saidas, "', width: 1.8 },
-        marker: { color: '", cor_saidas, "', size: isMobile ? 5.5 : 6.5, opacity: 0.85 },
-        hoverinfo: 'text',
-        text: d.box_s_hov,
-        hoveron: 'boxes+points'
+        hoverinfo: isMobile ? 'none' : 'y'
       };
 
-      tracesFinais = [traceBoxE, traceBoxS];
+      // 2. Pontos individuais com cores diferentes da caixa + Outliers em Vermelho com rótulo à direita + Hover Dia/Valor!
+      const tracePtsE = {
+        type: 'scatter',
+        mode: isMobile ? 'markers' : 'markers+text',
+        x: d.pts_e_x,
+        y: d.pts_e_y,
+        text: d.pts_e_lbl,
+        textposition: 'middle right',
+        textfont: { family: 'Inter, sans-serif', size: isMobile ? 8 : 9.5, color: '", cor_outlier, "' },
+        cliponaxis: false,
+        marker: {
+          color: d.pts_e_cor,
+          size: d.pts_e_tam,
+          line: { color: '#ffffff', width: 1 }
+        },
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.pts_e_hov
+      };
+
+      const tracePtsS = {
+        type: 'scatter',
+        mode: isMobile ? 'markers' : 'markers+text',
+        x: d.pts_s_x,
+        y: d.pts_s_y,
+        text: d.pts_s_lbl,
+        textposition: 'middle right',
+        textfont: { family: 'Inter, sans-serif', size: isMobile ? 8 : 9.5, color: '", cor_outlier, "' },
+        cliponaxis: false,
+        marker: {
+          color: d.pts_s_cor,
+          size: d.pts_s_tam,
+          line: { color: '#ffffff', width: 1 }
+        },
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.pts_s_hov
+      };
+
+      // 3. Rótulos da Média na direita de cada Boxplot
+      const traceMedE = {
+        type: 'scatter',
+        mode: 'text',
+        x: d.med_e_xr,
+        y: d.med_e_y,
+        text: isMobile ? d.med_e_y.map(function() { return ''; }) : d.med_e_txt,
+        textposition: 'middle right',
+        textfont: { family: 'Inter, sans-serif', size: 9, color: '", cor_media_box, "' },
+        cliponaxis: false,
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.med_e_hov
+      };
+
+      const traceMedS = {
+        type: 'scatter',
+        mode: 'text',
+        x: d.med_s_xr,
+        y: d.med_s_y,
+        text: isMobile ? d.med_s_y.map(function() { return ''; }) : d.med_s_txt,
+        textposition: 'middle right',
+        textfont: { family: 'Inter, sans-serif', size: 9, color: '", cor_media_box, "' },
+        cliponaxis: false,
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.med_s_hov
+      };
+
+      tracesFinais = [traceBoxE, traceBoxS, tracePtsE, tracePtsS, traceMedE, traceMedS];
 
     } else {
       // MODOS 1 E 2: BARRAS EMPILHADAS E LINHAS
@@ -658,12 +879,11 @@ function(el, x) {
           tamMarkerArr.push(isMobile ? 6 : 7);
         } else if (i === indiceClicado) {
           opacidadeArr.push(1);
-          // Bolinhas pretas quando clicado no modo de linhas!
           coresMarkerE.push('#000000');
           coresMarkerS.push('#000000');
           tamMarkerArr.push(isMobile ? 7.5 : 8.5);
         } else {
-          opacidadeArr.push(0.32); // Desfoque das demais colunas/pontos
+          opacidadeArr.push(0.32);
           coresMarkerE.push('", cor_entradas, "');
           coresMarkerS.push('", cor_saidas, "');
           tamMarkerArr.push(isMobile ? 5.5 : 6.5);
@@ -689,7 +909,7 @@ function(el, x) {
             txtLinhasS.push(rawS ? (' <br>' + rawS) : '');
           } else {
             posLinhasS.push('top center');
-            txtLinhasS.push(rawS ? (rawE + '<br> ') : '');
+            txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
           }
         } else {
           posLinhasS.push('top center');
@@ -705,10 +925,7 @@ function(el, x) {
       }
 
       const ocultarTxtMobile = (isMobile && qtdPontos > 10);
-      const hoverE = isMobile ? d.e_hover_mob : d.e_hover;
-      const hoverS = isMobile ? d.s_hover_mob : d.s_hover;
 
-      // Sem borda ao redor da barra (line.width = 0), apenas a sombra cinza no fundo!
       const markerEntradas = ehBarra ? {
         color: '", cor_entradas, "',
         opacity: opacidadeArr,
@@ -729,6 +946,7 @@ function(el, x) {
         opacity: opacidadeArr
       };
 
+      // No Mobile: hoverinfo = 'none' para nunca abrir o balão em cima do gráfico!
       const traceEntradas = {
         x: d.x,
         y: d.e_y,
@@ -747,8 +965,8 @@ function(el, x) {
           size: tamRotulo,
           color: ehBarra ? '#ffffff' : '", cor_entradas, "'
         },
-        hoverinfo: 'text',
-        hovertext: hoverE
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.e_hover
       };
 
       const traceSaidas = {
@@ -767,8 +985,8 @@ function(el, x) {
           size: tamRotulo,
           color: ehBarra ? '#000000' : '", cor_saidas, "'
         },
-        hoverinfo: 'text',
-        hovertext: hoverS
+        hoverinfo: isMobile ? 'none' : 'text',
+        hovertext: d.s_hover
       };
 
       tracesFinais = [traceEntradas, traceSaidas];
@@ -777,38 +995,53 @@ function(el, x) {
     const minY = ehBarra ? 0 : -(maxY * 0.06);
     const larguraContainer = painel.clientWidth || window.innerWidth;
 
+    const eixoXConfig = ehBox ? {
+      title: '',
+      type: 'linear',
+      tickmode: 'array',
+      tickvals: cats.map(function(_, idx) { return idx; }),
+      ticktext: cats,
+      range: [-0.55, (cats.length - 1) + 0.65],
+      showgrid: false,
+      zeroline: false,
+      fixedrange: true,
+      tickangle: 0,
+      tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
+    } : {
+      title: '',
+      type: 'category',
+      categoryorder: 'array',
+      categoryarray: cats,
+      showgrid: false,
+      zeroline: false,
+      fixedrange: true,
+      tickangle: (isMobile && qtdPontos > 8) ? -45 : 0,
+      tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
+    };
+
     const novoLayout = Object.assign({}, el.layout, {
       width: larguraContainer,
       height: alturaAtu,
       barmode: 'stack',
-      boxmode: 'group',
-      boxgap: 0.25,
-      boxgroupgap: 0.18,
       barcornerradius: raioAtu,
       bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.32),
       uniformtext: { mode: 'show', minsize: tamRotulo },
-      shapes: shapesDestaque,
-      hovermode: 'closest',
+      shapes: shapesLayout,
+      hovermode: isMobile ? false : 'closest',
       hoverlabel: {
         bgcolor: '", hover_bg_cor, "',
         bordercolor: '", borda_balao_hover, "',
         align: 'left',
         font: {
           family: 'Inter, sans-serif',
-          size: isMobile ? 10.5 : ", hover_fonte_tam, ",
+          size: ", hover_fonte_tam, ",
           color: '", hover_txt_cor, "'
         }
       },
       margin: isMobile
-        ? { t: 22, b: qtdPontos > 8 ? 38 : 30, l: 44, r: 10 }
-        : { t: 28, b: 42, l: 62, r: 12 },
-      xaxis: Object.assign({}, el.layout.xaxis, {
-        type: 'category',
-        categoryorder: 'array',
-        categoryarray: cats,
-        tickangle: (isMobile && qtdPontos > 8) ? -45 : 0,
-        tickfont: { family: 'Inter, sans-serif', size: tamEixoX, color: '", cor_eixo_x, "' }
-      }),
+        ? { t: 22, b: qtdPontos > 8 ? 38 : 30, l: 44, r: 14 }
+        : { t: 28, b: 42, l: 62, r: ehBox ? 45 : 15 },
+      xaxis: eixoXConfig,
       yaxis: Object.assign({}, el.layout.yaxis, {
         range: [minY, maxY],
         tickfont: { family: 'Inter, sans-serif', size: tamEixoY, color: '#444444' }
@@ -825,13 +1058,18 @@ function(el, x) {
     const d    = DADOS[mesAtual] && DADOS[mesAtual][usuarioAtual];
     const cats = obterCategoriasAtuais(d);
     const pt   = data.points[0];
-    const crv  = pt.curveNumber || 0;
+    const crv  = (pt.curveNumber !== undefined) ? (pt.curveNumber % 2) : 0;
 
-    let idx = cats.indexOf(pt.x);
-    if (idx === -1 && typeof pt.pointIndex === 'number') {
-      idx = pt.pointIndex;
+    let idx = -1;
+    if (modoAtual === 'boxplot' && typeof pt.x === 'number') {
+      idx = Math.round(pt.x);
+    } else {
+      idx = cats.indexOf(pt.x);
+      if (idx === -1 && typeof pt.pointIndex === 'number') {
+        idx = pt.pointIndex;
+      }
     }
-    if (idx === -1) return;
+    if (idx < 0 || idx >= cats.length) return;
 
     if (indiceClicado === idx && serieClicada === crv) {
       indiceClicado = null;
@@ -977,7 +1215,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (COM OS 3 BOTÕES DE VISÃO: EMPILHADO, LINHAS, BOXPLOT)
+# 8. ESTILO CSS E ESTRUTURA HTML (CARD UNIFICADO PC/MOBILE + HOVER ARREDONDADO)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1000,6 +1238,13 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     min-width: 0 !important;
     overflow: visible !important;
     box-sizing: border-box !important;
+  }
+  /* Deixa o balão de hover do PC com bordas arredondadas e sombra igual ao Card do Mobile */
+  .painel-fluxo-alf .hoverlayer .hovertext path {
+    rx: 8px !important;
+    ry: 8px !important;
+    stroke-width: 1.5px !important;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.10));
   }
   .painel-fluxo-alf .xtick,
   .painel-fluxo-alf .bars path,
@@ -1162,20 +1407,21 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   }
 
+  /* Card Interativo de Detalhes (usado no Mobile e ao clicar em uma coluna no PC!) */
   .card-hover-mobile-alf {
     display: none;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 8px;
-    padding: 10px 12px;
+    margin-top: 10px;
+    padding: 12px 14px;
     background: #ffffff;
     border: 1.5px solid #000000;
-    border-radius: 8px;
-    font-size: 11.5px;
-    line-height: 1.45;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
     color: #000000;
     text-align: left;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
@@ -1193,14 +1439,15 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
   .aba-mob-alf {
     font-family: inherit;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 4px;
+    padding: 4px 12px;
+    border-radius: 5px;
     border: 1px solid #cccccc;
     background: #f8f9fa;
     color: #333333;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
   .aba-mob-alf.ativa-e {
     background: ", cor_entradas, ";
@@ -1215,7 +1462,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   .fechar-card-mobile-alf {
     background: transparent;
     border: none;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1;
     color: #555555;
     cursor: pointer;
@@ -1273,6 +1520,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     .quadrado-legenda-alf {
       width: 11px;
       height: 11px;
+    }
+    .card-hover-mobile-alf {
+      font-size: 11.5px;
+      padding: 10px 12px;
     }
   }
 "))
