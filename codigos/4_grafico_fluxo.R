@@ -1,13 +1,14 @@
 # ==============================================================================
-# PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot
+# PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
-# Ajustes implementados:
-#   1. Gráfico de Linhas: bolinhas e bordas 100% pretas ao selecionar um mês/dia.
-#   2. Boxplot (Saídas): hover dos pontos exibe Valor | item_consumo | forma_pagamento | descricao.
-#   3. Card Inferior: Tabela Única Consolidada com células mescladas (rowspan)
-#      para não repetir categorias + Linha Final de Total Geral.
-#   4. Cabeçalho do Card limpo (apenas Mês/Ano na cor da série) e barra inferior
-#      com Média, Máx, Mín e Amplitude (Máx - Mín).
+# Ajustes Finais:
+#   1. Tabela de Entradas: Fonte de Renda | Descrição | Valor | (%) | Total | (%)
+#      (mantendo o (n) nos valores das fontes e na linha Total).
+#   2. Tabela de Saídas: Forma de Pagamento | Tipo de Despesa | Item de Consumo |
+#      Descrição | Valor | (%) | Total | (%) (com (n) na Forma, no Tipo de Despesa,
+#      no Item quando > 1 e na linha Total).
+#   3. Mesmas tabelas aplicadas ao Boxplot, mantendo as pílulas extras (Mediana, Q1/Q3, IIQ).
+#   4. No Mobile: Hover dos pontos e das medidas das caixas do Boxplot 100% ativo!
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -36,7 +37,7 @@ tamanho_eixo_x  <- 11
 cor_eixo_x      <- "#000000"
 tamanho_legenda <- 12.5
 
-# Balão de Hover no PC
+# Balão de Hover
 hover_bg_cor      <- "#FFFFFF"
 hover_txt_cor     <- "#000000"
 hover_fonte_tam   <- 12
@@ -44,7 +45,7 @@ borda_balao_hover <- "#000000"
 
 raio_cantos           <- 8
 altura_grafico        <- 440 # Altura no Notebook/PC
-altura_grafico_mobile <- 290 # Altura compacta no Celular
+altura_grafico_mobile <- 295 # Altura compacta no Celular
 
 incluir_a_pagar <- TRUE
 
@@ -214,7 +215,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# 4.2 Barra de estatísticas estilizada (Média, Máx, Mín e Amplitude)
+# 4.2 Barra de estatísticas estilizada (Média, Máx, Mín, Amplitude + Quartis no Boxplot)
 montar_barra_metricas <- function(vals, extra_quartis = NULL) {
   val_media <- base::mean(vals, na.rm = TRUE)
   val_max   <- base::max(vals, na.rm = TRUE)
@@ -275,7 +276,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
   }
   
   if (tipo_sel == "Entradas") {
-    # ENTRADAS: Fonte de Renda (n) | Descrição | Valor | Valor (%) | Valor Total | Valor Total (%)
+    # ENTRADAS: Fonte de Renda | Descrição | Valor | (%) | Total | (%)
     fontes_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -307,7 +308,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         dplyr::arrange(dplyr::desc(val_item)) %>%
         dplyr::mutate(
           pct_item = base::formatC((val_item / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
-          desc_lbl = base::ifelse(qtd_item > 1, base::paste0(descricao, " (", qtd_item, "x)"), descricao)
+          desc_lbl = base::ifelse(qtd_item > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_item, ")</span>"), descricao)
         )
       
       k_rows <- base::nrow(itens_f)
@@ -316,7 +317,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         borda_fim_grupo <- if (j == k_rows) " class='fim-grupo-row'" else ""
         
         if (j == 1) {
-          # Primeira linha do grupo recebe o rowspan mesclando Fonte de Renda e Valor Total!
           linhas_html <- base::c(linhas_html, base::paste0(
             "<tr", borda_fim_grupo, ">",
             "<td rowspan='", k_rows, "' class='cel-mesclada'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>",
@@ -339,7 +339,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       }
     }
     
-    # Linha final com o Total Geral
     linha_total <- base::paste0(
       "<tr class='linha-total-card'>",
       "<td><b>Total (", n_lanc, ")</b></td>",
@@ -355,19 +354,19 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<div class='wrapper-tabela-card'>",
       "<table class='tabela-resumo-card'>",
       "<thead><tr>",
-      "<th>Fonte de Renda (n)</th>",
+      "<th>Fonte de Renda</th>",
       "<th>Descrição</th>",
       "<th class='col-num'>Valor</th>",
-      "<th class='col-num'>Valor (%)</th>",
-      "<th class='col-num'>Valor Total</th>",
-      "<th class='col-num'>Valor Total (%)</th>",
+      "<th class='col-num'>(%)</th>",
+      "<th class='col-num'>Total</th>",
+      "<th class='col-num'>(%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
     )
     
   } else {
-    # SAÍDAS CONSOLIDADAS: Forma de Pagamento (n) | Tipo de Despesa | Item de Consumo (n) | Valor | Valor (%) | Valor Total | Valor Total (%)
+    # SAÍDAS CONSOLIDADAS: Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | (%) | Total | (%)
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -388,29 +387,48 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       tot_f     <- formas_agr$tot_forma[idx_f]
       pct_f     <- formas_agr$pct_forma[idx_f]
       
-      # Agrupa por Tipo de Despesa e Item de Consumo dentro da Forma de Pagamento
-      itens_f <- df_sub %>%
-        dplyr::filter(grupo_1 == f_atual) %>%
-        dplyr::group_by(grupo_2, item_consumo) %>%
+      df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
+      
+      # Quantidade total de lançamentos por Tipo de Despesa (para exibir p.ex. "variáveis (6)")
+      qtd_por_tipo <- df_forma %>%
+        dplyr::count(grupo_2, name = "qtd_lanc_tipo")
+      
+      # Quantidade total de lançamentos por Item de Consumo dentro de cada Tipo de Despesa
+      qtd_por_item <- df_forma %>%
+        dplyr::count(grupo_2, item_consumo, name = "qtd_lanc_item")
+      
+      # Agrupa até o nível de Descrição dentro de Forma -> Tipo -> Item
+      itens_f <- df_forma %>%
+        dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
-          val_item = base::sum(valor, na.rm = TRUE),
-          qtd_item = dplyr::n(),
+          val_desc = base::sum(valor, na.rm = TRUE),
+          qtd_desc = dplyr::n(),
           .groups  = "drop"
         ) %>%
-        dplyr::arrange(grupo_2, dplyr::desc(val_item)) %>%
+        dplyr::left_join(qtd_por_tipo, by = "grupo_2") %>%
+        dplyr::left_join(qtd_por_item, by = base::c("grupo_2", "item_consumo")) %>%
+        dplyr::arrange(grupo_2, item_consumo, dplyr::desc(val_desc)) %>%
         dplyr::mutate(
-          pct_item = base::formatC((val_item / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
-          item_lbl = base::ifelse(qtd_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_item, ")</span>"), item_consumo)
+          pct_desc = base::formatC((val_desc / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
+          tipo_lbl = base::paste0(grupo_2, " <span class='badge-n'>(", qtd_lanc_tipo, ")</span>"),
+          item_lbl = base::ifelse(qtd_lanc_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_lanc_item, ")</span>"), item_consumo),
+          desc_lbl = base::ifelse(qtd_desc > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_desc, ")</span>"), descricao)
         )
       
-      # Calcula quantas linhas cada Tipo de Despesa ocupa para mesclar também o Tipo de Despesa!
-      contagem_tipo <- itens_f %>%
-        dplyr::count(grupo_2, name = "n_linhas_tipo")
+      # Calcula quantas linhas HTML cada Tipo de Despesa e cada Item de Consumo ocupam para o rowspan!
+      linhas_por_tipo <- itens_f %>%
+        dplyr::count(grupo_2, name = "n_rows_tipo")
+      
+      linhas_por_item <- itens_f %>%
+        dplyr::count(grupo_2, item_consumo, name = "n_rows_item")
       
       itens_f <- itens_f %>%
-        dplyr::left_join(contagem_tipo, by = "grupo_2") %>%
+        dplyr::left_join(linhas_por_tipo, by = "grupo_2") %>%
+        dplyr::left_join(linhas_por_item, by = base::c("grupo_2", "item_consumo")) %>%
         dplyr::group_by(grupo_2) %>%
         dplyr::mutate(prim_tipo = dplyr::row_number() == 1) %>%
+        dplyr::group_by(grupo_2, item_consumo) %>%
+        dplyr::mutate(prim_item = dplyr::row_number() == 1) %>%
         dplyr::ungroup()
       
       k_rows <- base::nrow(itens_f)
@@ -423,7 +441,11 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         } else ""
         
         cel_tipo <- if (itens_f$prim_tipo[j]) {
-          base::paste0("<td rowspan='", itens_f$n_linhas_tipo[j], "' class='cel-mesclada-sub'>", itens_f$grupo_2[j], "</td>")
+          base::paste0("<td rowspan='", itens_f$n_rows_tipo[j], "' class='cel-mesclada-sub'>", itens_f$tipo_lbl[j], "</td>")
+        } else ""
+        
+        cel_item <- if (itens_f$prim_item[j]) {
+          base::paste0("<td rowspan='", itens_f$n_rows_item[j], "' class='cel-mesclada-sub'>", itens_f$item_lbl[j], "</td>")
         } else ""
         
         cel_tot_forma <- if (j == 1) {
@@ -437,19 +459,20 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           "<tr", borda_fim_grupo, ">",
           cel_forma,
           cel_tipo,
-          "<td>", itens_f$item_lbl[j], "</td>",
-          "<td class='col-num'>R$ ", formatar_brl(itens_f$val_item[j]), "</td>",
-          "<td class='col-num'>", itens_f$pct_item[j], "%</td>",
+          cel_item,
+          "<td>", itens_f$desc_lbl[j], "</td>",
+          "<td class='col-num'>R$ ", formatar_brl(itens_f$val_desc[j]), "</td>",
+          "<td class='col-num'>", itens_f$pct_desc[j], "%</td>",
           cel_tot_forma,
           "</tr>"
         ))
       }
     }
     
-    # Linha final com o Total Geral
     linha_total <- base::paste0(
       "<tr class='linha-total-card'>",
       "<td><b>Total (", n_lanc, ")</b></td>",
+      "<td>—</td>",
       "<td>—</td>",
       "<td>—</td>",
       "<td class='col-num'><b>R$ ", formatar_brl(val_total), "</b></td>",
@@ -463,13 +486,14 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<div class='wrapper-tabela-card'>",
       "<table class='tabela-resumo-card'>",
       "<thead><tr>",
-      "<th>Forma de Pagamento (n)</th>",
+      "<th>Forma de Pagamento</th>",
       "<th>Tipo de Despesa</th>",
       "<th>Item de Consumo</th>",
+      "<th>Descrição</th>",
       "<th class='col-num'>Valor</th>",
-      "<th class='col-num'>Valor (%)</th>",
-      "<th class='col-num'>Valor Total</th>",
-      "<th class='col-num'>Valor Total (%)</th>",
+      "<th class='col-num'>(%)</th>",
+      "<th class='col-num'>Total</th>",
+      "<th class='col-num'>(%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
@@ -864,6 +888,8 @@ function(el, x) {
     if (legBoxplotDir) {
       legBoxplotDir.style.display = (modoAtual === 'boxplot') ? 'inline-flex' : 'none';
     }
+    // Ativa classe no painel quando em Boxplot para liberar o hover dos pontos e medidas no Mobile!
+    painel.classList.toggle('modo-boxplot-ativo', modoAtual === 'boxplot');
 
     if (indiceClicado !== null && cats.length && indiceClicado < cats.length) {
       const valE  = (modoAtual === 'boxplot') ? (d.box_res_e_y[indiceClicado] || 0) : (d.e_y[indiceClicado] || 0);
@@ -971,6 +997,7 @@ function(el, x) {
         });
       }
 
+      // Caixas com hover das medidas (max, q3, median, q1, min) ativo tanto no PC quanto no Mobile!
       const traceBoxE = {
         type: 'box',
         x: xBoxE,
@@ -978,6 +1005,7 @@ function(el, x) {
         name: 'Entradas',
         width: 0.26,
         boxpoints: false,
+        hoveron: 'boxes',
         fillcolor: 'rgba(41, 182, 216, 0.42)',
         line: { color: '", cor_entradas, "', width: 1.8 },
         hoverinfo: 'y'
@@ -990,11 +1018,13 @@ function(el, x) {
         name: 'Saídas',
         width: 0.26,
         boxpoints: false,
+        hoveron: 'boxes',
         fillcolor: 'rgba(27, 120, 161, 0.42)',
         line: { color: '", cor_saidas, "', width: 1.8 },
         hoverinfo: 'y'
       };
 
+      // Pontos individuais do Boxplot com hover ativo também no Mobile!
       const tracePtsE = {
         type: 'scatter',
         mode: 'markers',
@@ -1002,7 +1032,7 @@ function(el, x) {
         y: d.pts_e_y,
         marker: {
           color: d.pts_e_cor,
-          size: d.pts_e_tam,
+          size: isMobile ? d.pts_e_tam.map(function(s) { return s + 1.5; }) : d.pts_e_tam,
           line: { color: '#ffffff', width: 1 }
         },
         hoverinfo: 'text',
@@ -1016,7 +1046,7 @@ function(el, x) {
         y: d.pts_s_y,
         marker: {
           color: d.pts_s_cor,
-          size: d.pts_s_tam,
+          size: isMobile ? d.pts_s_tam.map(function(s) { return s + 1.5; }) : d.pts_s_tam,
           line: { color: '#ffffff', width: 1 }
         },
         hoverinfo: 'text',
@@ -1027,7 +1057,6 @@ function(el, x) {
 
     } else {
       // MODOS 1 E 2: BARRAS EMPILHADAS E LINHAS
-      // No modo de Linhas: quando clicado, tanto o interior quanto a BORDA da bolinha ficam 100% pretos!
       const coresMarkerE = [];
       const coresMarkerS = [];
       const bordaMarkerE = [];
@@ -1192,13 +1221,14 @@ function(el, x) {
       uniformtext: { mode: 'show', minsize: tamRotulo },
       shapes: shapesLayout,
       hovermode: 'closest',
+      hoverdistance: isMobile ? 35 : 20,
       hoverlabel: {
         bgcolor: '", hover_bg_cor, "',
         bordercolor: '", borda_balao_hover, "',
         align: 'left',
         font: {
           family: 'Inter, sans-serif',
-          size: ", hover_fonte_tam, ",
+          size: isMobile ? 10.5 : ", hover_fonte_tam, ",
           color: '", hover_txt_cor, "'
         }
       },
@@ -1238,6 +1268,15 @@ function(el, x) {
     }
     if (idx < 0 || idx >= cats.length) return;
 
+    // No modo Boxplot no celular: tocar em pontos/caixas do mesmo mês mantém o card aberto e permite ver os hovers!
+    if (modoAtual === 'boxplot' && window.innerWidth <= 768) {
+      indiceClicado = idx;
+      serieClicada  = crv;
+      atualizarRotulosTopo(d);
+      atualizarCardInterativo(d);
+      return;
+    }
+
     if (indiceClicado === idx && serieClicada === crv) {
       indiceClicado = null;
     } else {
@@ -1261,7 +1300,8 @@ function(el, x) {
       return;
     }
 
-    if (window.innerWidth <= 768) {
+    // No celular para Barras/Linhas: garante que o toque em qualquer parte da coluna abra a tabela!
+    if (window.innerWidth <= 768 && modoAtual !== 'boxplot') {
       const bgRect = el.querySelector('.nsewdrag');
       if (!bgRect) return;
       const rect = bgRect.getBoundingClientRect();
@@ -1401,7 +1441,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (TABELA ÚNICA MESCLADA + MÉTRICAS COM AMPLITUDE)
+# 8. ESTILO CSS E ESTRUTURA HTML (HOVER DO BOXPLOT LIBERADO NO MOBILE)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1708,7 +1748,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-size: 12px;
   }
   .tabela-resumo-card th {
-    text-align: left;
+    text-align: center;
     font-weight: 700;
     color: #0f172a;
     background: #f8fafc;
@@ -1718,6 +1758,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     white-space: nowrap;
   }
   .tabela-resumo-card td {
+    text-align: center;
     padding: 7px 10px;
     border-bottom: 1px solid #e2e8f0;
     color: #1e293b;
@@ -1753,7 +1794,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-size: 11px;
   }
   .tabela-resumo-card .col-num {
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
   }
   .barra-metricas-card {
@@ -1787,9 +1828,9 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-weight: 700;
   }
 
-  /* No Celular: esconde o balão flutuante em cima do gráfico e deixa só o Card embaixo */
+  /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot para ver os pontos e medidas! */
   @media (max-width: 768px) {
-    .painel-fluxo-alf .hoverlayer {
+    .painel-fluxo-alf:not(.modo-boxplot-ativo) .hoverlayer {
       display: none !important;
     }
     .painel-fluxo-alf {
