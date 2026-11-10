@@ -1,17 +1,12 @@
 # ==============================================================================
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
-# Ajustes implementados:
-#   1. Indicadores superiores (Saídas, Entradas, Diferença) em pílulas compactas
-#      seguindo exatamente a estética da barra de filtros superior (ABNT/Alex).
-#   2. Card Inferior reestruturado na ordem solicitada:
-#      - Abas dinâmicas no topo: "Entradas Setembro/2026" | "Saídas Setembro/2026"
-#      - Bloco "Resumo Estatístico" logo abaixo das abas
-#      - Tabela limpa em estilo ABNT puro (sem bordas verticais e sem barra de
-#        rolagem cortando textos).
-#   3. Solução definitiva para muitos lançamentos: cada Item de Consumo ocupa
-#      apenas 1 linha na tabela; quando há várias descrições (ex: 21 Ubers em
-#      transporte), elas ficam agrupadas num botão expansível limpo na célula!
+# Estrutura visual:
+#   1. Título principal ACIMA da linha preta da barra de filtros.
+#   2. Barra de filtros (Período, Usuário com fotos, Visão) com linha preta no topo.
+#   3. Legenda limpa (Saídas, Entradas, Diferença) sem caixinhas/bordas ao redor.
+#   4. Card inferior com abas dinâmicas ("Entradas Setembro/2026"), Resumo
+#      Estatístico acima e Tabela ABNT limpa abaixo.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -363,9 +358,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     )
     
   } else {
-    # SAÍDAS ENXUTAS: Cada (Forma de Pagamento x Tipo de Despesa x Item de Consumo) é 1 ÚNICA LINHA!
-    # Se o Item de Consumo tiver 1 descrição, exibe direto; se tiver várias (ex: 21 Ubers),
-    # agrupa em um botão expansível elegante na própria célula, evitando tabelas gigantes!
+    # SAÍDAS ENXUTAS: Cada (Forma de Pagamento x Tipo de Despesa x Item de Consumo) ocupa 1 única linha
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -391,7 +384,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       qtd_por_tipo <- df_forma %>%
         dplyr::count(grupo_2, name = "qtd_lanc_tipo")
       
-      # Consolida descrições dentro de cada Item de Consumo para que cada Item ocupe apenas 1 linha!
       itens_por_consumo <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
@@ -519,7 +511,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     )
   }
   
-  # Ordem solicitada: 1º Resumo Estatístico -> 2º Tabela
   base::paste0(
     bloco_resumo,
     "<div class='subtitulo-card-alf'>Detalhamento dos Lançamentos</div>",
@@ -552,7 +543,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       eixo_x = if (usar_ano) base::paste0("<b>", mes_label, "</b>") else base::paste0("<b>", mes_nome, "</b>")
     )
   
-  # Vetores para alimentar o Boxplot
   box_cats        <- base::as.character(escopo_meses$eixo_x)
   box_periodos    <- base::as.character(escopo_meses$mes_label)
   box_e_x         <- base::character(0)
@@ -879,7 +869,6 @@ function(el, x) {
 
     const htmlAtivo = (serieClicada === 1) ? htmlS : htmlE;
 
-    // Abas dinâmicas com o nome do Mês/Ano (ex: 'Entradas Setembro/2026' | 'Saídas Setembro/2026')
     cardDetalhes.innerHTML =
       '<div class=\"topo-card-mobile-alf\">' +
         '<div class=\"abas-card-mobile-alf\">' +
@@ -1459,7 +1448,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (CAIXINHAS ESTILO BARRA SUPERIOR + TABELA ABNT)
+# 8. ESTILO CSS E ESTRUTURA HTML (TÍTULO ANTES DA LINHA PRETA + LEGENDA LIMPA)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1494,6 +1483,18 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   .painel-fluxo-alf .box {
     cursor: pointer !important;
   }
+
+  /* 1. Título Principal ACIMA da linha preta da barra de controles! */
+  .titulo-grafico-alf {
+    color: ", titulo_cor, ";
+    font-size: ", titulo_tamanho, "px;
+    font-weight: 700;
+    text-align: left;
+    margin: 0 0 8px 2px;
+    line-height: 1.25;
+  }
+
+  /* 2. Barra de Controles com a linha preta superior */
   .barra-controles-alf {
     display: flex;
     flex-wrap: wrap;
@@ -1501,23 +1502,18 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     justify-content: space-between;
     gap: 12px;
     padding: 12px 16px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     background: #fcfcfc;
     border: 1px solid #e0e0e0;
     border-top: 2px solid #000000;
     border-radius: 0 0 10px 10px;
   }
+
+  /* 3. Legenda Limpa (Saídas, Entradas, Diferença) sem caixinhas/bordas ao redor */
   .cabecalho-grafico-alf {
     text-align: left;
     padding: 0 2px;
-    margin-bottom: 8px;
-  }
-  .titulo-grafico-alf {
-    color: ", titulo_cor, ";
-    font-size: ", titulo_tamanho, "px;
-    font-weight: 700;
-    margin: 0 0 10px 0;
-    line-height: 1.25;
+    margin-bottom: 6px;
   }
   .linha-legendas-topo-alf {
     display: flex;
@@ -1527,36 +1523,25 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     gap: 12px;
     width: 100%;
   }
-
-  /* =========================================================
-     CAIXINHAS HORIZONTAIS COMPACTAS (MESMO ESTILO DA BARRA DE FILTROS)
-     ========================================================= */
   .legenda-custom-alf {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 18px;
     margin: 0;
     padding: 0;
   }
   .item-legenda-alf {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     font-size: ", tamanho_legenda, "px;
-    color: #111111;
-    background: #fcfcfc;
-    border: 1px solid #dcdcdc;
-    border-top: 2px solid #000000;
-    border-radius: 0 0 8px 8px;
-    padding: 6px 13px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    transition: all 0.15s ease;
+    color: #000000;
   }
   .quadrado-legenda-alf {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
     display: inline-block;
     flex-shrink: 0;
   }
@@ -1566,11 +1551,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-    background: #fcfcfc;
-    border: 1px solid #dcdcdc;
-    border-top: 2px solid #000000;
-    border-radius: 0 0 8px 8px;
-    padding: 6px 13px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 5px 12px;
     font-size: 11.5px;
     color: #1e293b;
   }
@@ -1925,6 +1909,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     .painel-fluxo-alf {
       margin: 12px auto;
     }
+    .titulo-grafico-alf {
+      font-size: 13.5px;
+      margin-bottom: 6px;
+    }
     .barra-controles-alf {
       padding: 9px 11px;
       gap: 7px;
@@ -1956,23 +1944,18 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       font-size: 10.5px;
       padding: 4px 7px;
     }
-    .titulo-grafico-alf {
-      font-size: 13.5px;
-      margin-bottom: 8px;
-    }
     .legenda-custom-alf {
-      width: 100%;
-      gap: 6px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
     }
     .item-legenda-alf {
-      font-size: 11px;
-      padding: 5px 9px;
+      font-size: 11.5px;
       gap: 6px;
-      flex: 1 1 auto;
     }
     .quadrado-legenda-alf {
-      width: 10px;
-      height: 10px;
+      width: 11px;
+      height: 11px;
     }
     .legenda-boxplot-direita-alf {
       width: 100%;
@@ -2008,6 +1991,9 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
 opcoes_html_mes <- purrr::map(meses_disponiveis, function(m) {
   htmltools::tags$option(value = m, m)
 })
+
+# Título separado para entrar ANTES da barra de controles com linha preta!
+titulo_topo_html <- htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome)
 
 controles_html <- htmltools::tags$div(
   class = "barra-controles-alf",
@@ -2059,10 +2045,9 @@ controles_html <- htmltools::tags$div(
   )
 )
 
-# Cabeçalho com as 3 Caixinhas Horizontais Compactas (estilo barra de filtros)
+# Legenda limpa (sem caixinhas com linha preta em cima) logo abaixo da barra de controles
 cabecalho_html <- htmltools::tags$div(
   class = "cabecalho-grafico-alf",
-  htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome),
   htmltools::tags$div(
     class = "linha-legendas-topo-alf",
     htmltools::tags$div(
@@ -2105,13 +2090,14 @@ cabecalho_html <- htmltools::tags$div(
 )
 
 # ==============================================================================
-# 9. OBJETO FINAL
+# 9. OBJETO FINAL (ORDEM: TÍTULO -> BARRA PRETA DE FILTROS -> LEGENDA -> GRÁFICO)
 # ==============================================================================
 
 grafico_fluxo <- htmltools::tagList(
   estilo_controles_fluxo,
   htmltools::tags$div(
     class = "painel-fluxo-alf",
+    titulo_topo_html,
     controles_html,
     cabecalho_html,
     htmltools::tags$div(class = "grafico-scroll", grafico),
