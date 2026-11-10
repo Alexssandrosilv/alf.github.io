@@ -1,12 +1,17 @@
 # ==============================================================================
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
-# Ajustes Finais:
-#   1. Indicadores de Saídas, Entradas e Diferença em Cards KPI elegantes
-#      (com barra superior na cor da série, título no topo e valor em destaque),
-#      100% dinâmicos ao clicar nos meses/dias ou trocar filtros.
-#   2. Barra de controles superior e interações mantidas intactas.
-#   3. Quartis sincronizados (type = 5 / linear) e tabelas consolidadas com rowspan.
+# Ajustes implementados:
+#   1. Indicadores superiores (Saídas, Entradas, Diferença) em pílulas compactas
+#      seguindo exatamente a estética da barra de filtros superior (ABNT/Alex).
+#   2. Card Inferior reestruturado na ordem solicitada:
+#      - Abas dinâmicas no topo: "Entradas Setembro/2026" | "Saídas Setembro/2026"
+#      - Bloco "Resumo Estatístico" logo abaixo das abas
+#      - Tabela limpa em estilo ABNT puro (sem bordas verticais e sem barra de
+#        rolagem cortando textos).
+#   3. Solução definitiva para muitos lançamentos: cada Item de Consumo ocupa
+#      apenas 1 linha na tabela; quando há várias descrições (ex: 21 Ubers em
+#      transporte), elas ficam agrupadas num botão expansível limpo na célula!
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -44,9 +49,6 @@ borda_balao_hover <- "#000000"
 raio_cantos           <- 8
 altura_grafico        <- 440 # Altura no Notebook/PC
 altura_grafico_mobile <- 295 # Altura compacta no Celular
-
-# Limite máximo de descrições abertas por Item de Consumo antes de agrupar em "+ X outros"
-max_desc_por_item     <- 3
 
 incluir_a_pagar <- TRUE
 
@@ -88,7 +90,7 @@ padronizar_usuario <- function(u) {
   )
 }
 
-# Função que calcula Q1, Mediana (Q2) e Q3 usando EXATAMENTE o algoritmo linear do Plotly (type = 5)
+# Calcula Q1, Mediana (Q2) e Q3 com o mesmo método linear do Plotly (type = 5)
 calcular_quartis_plotly <- function(vals) {
   v <- base::sort(stats::na.omit(base::as.numeric(vals)))
   n <- base::length(v)
@@ -153,7 +155,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER E TABELA ÚNICA CONSOLIDADA COM AGRUPAMENTO INTELIGENTE
+# 4. FUNÇÕES DE HOVER E TABELA CONSOLIDADA (1 LINHA POR ITEM DE CONSUMO)
 # ==============================================================================
 
 # 4.1 Hover flutuante (PC) para Barras e Linhas
@@ -227,7 +229,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# 4.2 Barra de estatísticas estilizada (Quartis 100% sincronizados com o Plotly!)
+# 4.2 Seção "Resumo Estatístico" (posicionada ACIMA da tabela no Card)
 montar_barra_metricas <- function(vals, extra_quartis = NULL) {
   val_media <- base::mean(vals, na.rm = TRUE)
   val_max   <- base::max(vals, na.rm = TRUE)
@@ -244,37 +246,31 @@ montar_barra_metricas <- function(vals, extra_quartis = NULL) {
   }
   
   base::paste0(
+    "<div class='secao-resumo-estatistico'>",
+    "<div class='subtitulo-card-alf'>Resumo Estatístico</div>",
     "<div class='barra-metricas-card'>",
     bloco_q,
     "<div class='pilula-metrica-card'><span>Média:</span> <b>R$ ", formatar_brl(val_media), "</b></div>",
     "<div class='pilula-metrica-card'><span>Máx:</span> <b>R$ ", formatar_brl(val_max), "</b></div>",
     "<div class='pilula-metrica-card'><span>Mín:</span> <b>R$ ", formatar_brl(val_min), "</b></div>",
     "<div class='pilula-metrica-card'><span>Amplitude:</span> <b>R$ ", formatar_brl(val_amp), "</b></div>",
+    "</div>",
     "</div>"
   )
 }
 
-# 4.3 Tabela Única Consolidada com Agrupamento Top-N por Item
+# 4.3 Tabela ABNT Limpa (Resumo Estatístico no topo + 1 linha enxuta por Item de Consumo)
 montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, incluir_quartis = FALSE) {
-  cor_titulo <- base::ifelse(tipo_sel == "Entradas", cor_entradas, cor_saidas)
-  n_lanc     <- base::nrow(df_sub)
-  
-  cabecalho_card <- base::paste0(
-    "<div class='titulo-card-tab' style='color:", cor_titulo, ";'>",
-    titulo_periodo, "</div>"
-  )
+  n_lanc <- base::nrow(df_sub)
   
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
-    return(base::paste0(
-      cabecalho_card,
-      "<div class='sem-dados-card'>Nenhum lançamento registrado neste período.</div>"
-    ))
+    return("<div class='sem-dados-card'>Nenhum lançamento registrado neste período.</div>")
   }
   
-  val_total <- base::sum(df_sub$valor, na.rm = TRUE)
-  vals      <- df_sub$valor
-  
+  val_total     <- base::sum(df_sub$valor, na.rm = TRUE)
+  vals          <- df_sub$valor
   quartis_lista <- if (incluir_quartis) calcular_quartis_plotly(vals) else NULL
+  bloco_resumo  <- montar_barra_metricas(vals, extra_quartis = quartis_lista)
   
   if (tipo_sel == "Entradas") {
     # ENTRADAS: Fonte de Renda | Descrição | Valor | (%) | Total | (%)
@@ -293,10 +289,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     linhas_html <- base::character(0)
     
     for (idx_f in base::seq_len(base::nrow(fontes_agr))) {
-      f_atual   <- fontes_agr$grupo_1[idx_f]
-      n_f       <- fontes_agr$n_fonte[idx_f]
-      tot_f     <- fontes_agr$tot_fonte[idx_f]
-      pct_f     <- fontes_agr$pct_fonte[idx_f]
+      f_atual <- fontes_agr$grupo_1[idx_f]
+      n_f     <- fontes_agr$n_fonte[idx_f]
+      tot_f   <- fontes_agr$tot_fonte[idx_f]
+      pct_f   <- fontes_agr$pct_fonte[idx_f]
       
       itens_f <- df_sub %>%
         dplyr::filter(grupo_1 == f_atual) %>%
@@ -367,7 +363,9 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     )
     
   } else {
-    # SAÍDAS CONSOLIDADAS COM COMPACTAÇÃO INTELIGENTE DE DESCRIÇÕES LONGAS
+    # SAÍDAS ENXUTAS: Cada (Forma de Pagamento x Tipo de Despesa x Item de Consumo) é 1 ÚNICA LINHA!
+    # Se o Item de Consumo tiver 1 descrição, exibe direto; se tiver várias (ex: 21 Ubers),
+    # agrupa em um botão expansível elegante na própria célula, evitando tabelas gigantes!
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -383,128 +381,96 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     linhas_html <- base::character(0)
     
     for (idx_f in base::seq_len(base::nrow(formas_agr))) {
-      f_atual   <- formas_agr$grupo_1[idx_f]
-      n_f       <- formas_agr$n_forma[idx_f]
-      tot_f     <- formas_agr$tot_forma[idx_f]
-      pct_f     <- formas_agr$pct_forma[idx_f]
+      f_atual <- formas_agr$grupo_1[idx_f]
+      n_f     <- formas_agr$n_forma[idx_f]
+      tot_f   <- formas_agr$tot_forma[idx_f]
+      pct_f   <- formas_agr$pct_forma[idx_f]
       
       df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
       
       qtd_por_tipo <- df_forma %>%
         dplyr::count(grupo_2, name = "qtd_lanc_tipo")
       
-      qtd_por_item <- df_forma %>%
-        dplyr::count(grupo_2, item_consumo, name = "qtd_lanc_item")
-      
-      itens_brutos <- df_forma %>%
+      # Consolida descrições dentro de cada Item de Consumo para que cada Item ocupe apenas 1 linha!
+      itens_por_consumo <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
           val_desc = base::sum(valor, na.rm = TRUE),
           qtd_desc = dplyr::n(),
           .groups  = "drop"
         ) %>%
-        dplyr::arrange(grupo_2, item_consumo, dplyr::desc(val_desc))
-      
-      itens_f <- itens_brutos %>%
-        dplyr::group_by(grupo_2, item_consumo) %>%
+        dplyr::arrange(grupo_2, item_consumo, dplyr::desc(val_desc)) %>%
         dplyr::mutate(
-          ordem_desc = dplyr::row_number(),
-          total_desc = dplyr::n()
-        ) %>%
-        dplyr::ungroup()
-      
-      top_itens <- itens_f %>%
-        dplyr::filter(total_desc <= max_desc_por_item | ordem_desc <= max_desc_por_item) %>%
-        dplyr::mutate(
-          desc_lbl = base::ifelse(
-            qtd_desc > 1,
-            base::paste0(descricao, " <span class='badge-n'>(", qtd_desc, ")</span>"),
-            descricao
+          txt_unitario = base::paste0(
+            descricao,
+            base::ifelse(qtd_desc > 1, base::paste0(" <span class='badge-n'>(", qtd_desc, ")</span>"), "")
+          ),
+          txt_detalhe = base::paste0(
+            "<div class='item-lista-oculta'><span>• ", descricao,
+            base::ifelse(qtd_desc > 1, base::paste0(" (", qtd_desc, "x)"), ""),
+            "</span><b>R$ ", formatar_brl(val_desc), "</b></div>"
           )
         ) %>%
-        dplyr::select(grupo_2, item_consumo, desc_lbl, val_desc, ordem_desc)
-      
-      resto_itens <- itens_f %>%
-        dplyr::filter(total_desc > max_desc_por_item & ordem_desc > max_desc_por_item) %>%
         dplyr::group_by(grupo_2, item_consumo) %>%
         dplyr::summarise(
-          qtd_extra   = dplyr::n(),
-          lanc_extra  = base::sum(qtd_desc),
-          lista_extra = base::paste0(
-            descricao,
-            base::ifelse(qtd_desc > 1, base::paste0(" (", qtd_desc, "x)"), ""),
-            ": R$ ", formatar_brl(val_desc),
-            collapse = " &#10;• "
-          ),
-          val_desc    = base::sum(val_desc, na.rm = TRUE),
-          ordem_desc  = 999L,
-          .groups     = "drop"
+          qtd_lanc_item = base::sum(qtd_desc),
+          n_desc_dist   = dplyr::n(),
+          val_item      = base::sum(val_desc, na.rm = TRUE),
+          desc_html     = if (dplyr::n() == 1) {
+            dplyr::first(txt_unitario)
+          } else {
+            base::paste0(
+              "<details class='detalhes-extras-card'>",
+              "<summary>", dplyr::first(txt_unitario), " <span class='pilula-ver-mais'>+", dplyr::n() - 1, " ver ▾</span></summary>",
+              "<div class='lista-oculta-card'>", base::paste(txt_detalhe, collapse = ""), "</div>",
+              "</details>"
+            )
+          },
+          .groups = "drop"
         ) %>%
-        dplyr::mutate(
-          desc_lbl = base::paste0(
-            "<details class='detalhes-extras-card'>",
-            "<summary>+ ", qtd_extra, " outras descrições <span class='badge-n'>(", lanc_extra, ")</span></summary>",
-            "<div class='lista-oculta-card'>• ", base::gsub(" &#10;• ", "<br>• ", lista_extra), "</div>",
-            "</details>"
-          )
-        ) %>%
-        dplyr::select(grupo_2, item_consumo, desc_lbl, val_desc, ordem_desc)
-      
-      itens_compactos <- dplyr::bind_rows(top_itens, resto_itens) %>%
         dplyr::left_join(qtd_por_tipo, by = "grupo_2") %>%
-        dplyr::left_join(qtd_por_item, by = base::c("grupo_2", "item_consumo")) %>%
-        dplyr::arrange(grupo_2, item_consumo, ordem_desc) %>%
+        dplyr::arrange(grupo_2, dplyr::desc(val_item)) %>%
         dplyr::mutate(
-          pct_desc = base::formatC((val_desc / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
+          pct_item = base::formatC((val_item / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
           tipo_lbl = base::paste0("<b>", grupo_2, "</b> <span class='badge-n'>(", qtd_lanc_tipo, ")</span>"),
           item_lbl = base::ifelse(qtd_lanc_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_lanc_item, ")</span>"), item_consumo)
         )
       
-      linhas_por_tipo <- itens_compactos %>%
+      linhas_por_tipo <- itens_por_consumo %>%
         dplyr::count(grupo_2, name = "n_rows_tipo")
       
-      linhas_por_item <- itens_compactos %>%
-        dplyr::count(grupo_2, item_consumo, name = "n_rows_item")
-      
-      itens_compactos <- itens_compactos %>%
+      itens_por_consumo <- itens_por_consumo %>%
         dplyr::left_join(linhas_por_tipo, by = "grupo_2") %>%
-        dplyr::left_join(linhas_por_item, by = base::c("grupo_2", "item_consumo")) %>%
         dplyr::group_by(grupo_2) %>%
-        dplyr::mutate(prim_tipo = dplyr::row_number() == 1) %>%
-        dplyr::group_by(grupo_2, item_consumo) %>%
         dplyr::mutate(
-          prim_item = dplyr::row_number() == 1,
-          ult_item  = dplyr::row_number() == dplyr::n()
+          prim_tipo = dplyr::row_number() == 1,
+          ult_tipo  = dplyr::row_number() == dplyr::n()
         ) %>%
         dplyr::ungroup()
       
-      k_rows <- base::nrow(itens_compactos)
+      k_rows <- base::nrow(itens_por_consumo)
       
       for (j in base::seq_len(k_rows)) {
         cls_tr <- if (j == k_rows) {
           " class='fim-grupo-row'"
-        } else if (itens_compactos$ult_item[j]) {
+        } else if (itens_por_consumo$ult_tipo[j]) {
           " class='fim-subitem-row'"
         } else {
           ""
         }
         
         cel_forma <- if (j == 1) {
-          base::paste0("<td rowspan='", k_rows, "' class='cel-mesclada'><div class='sticky-cel'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></div></td>")
+          base::paste0("<td rowspan='", k_rows, "' class='cel-mesclada'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>")
         } else ""
         
-        cel_tipo <- if (itens_compactos$prim_tipo[j]) {
-          base::paste0("<td rowspan='", itens_compactos$n_rows_tipo[j], "' class='cel-mesclada-sub'><div class='sticky-cel'>", itens_compactos$tipo_lbl[j], "</div></td>")
-        } else ""
-        
-        cel_item <- if (itens_compactos$prim_item[j]) {
-          base::paste0("<td rowspan='", itens_compactos$n_rows_item[j], "' class='cel-mesclada-item'><div class='sticky-cel'>", itens_compactos$item_lbl[j], "</div></td>")
+        cel_tipo <- if (itens_por_consumo$prim_tipo[j]) {
+          base::paste0("<td rowspan='", itens_por_consumo$n_rows_tipo[j], "' class='cel-mesclada-sub'>", itens_por_consumo$tipo_lbl[j], "</td>")
         } else ""
         
         cel_tot_forma <- if (j == 1) {
           base::paste0(
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><div class='sticky-cel'><b>R$ ", formatar_brl(tot_f), "</b></div></td>",
-            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><div class='sticky-cel'><b>", pct_f, "%</b></div></td>"
+            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>R$ ", formatar_brl(tot_f), "</b></td>",
+            "<td rowspan='", k_rows, "' class='col-num cel-mesclada'><b>", pct_f, "%</b></td>"
           )
         } else ""
         
@@ -512,10 +478,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           "<tr", cls_tr, ">",
           cel_forma,
           cel_tipo,
-          cel_item,
-          "<td>", itens_compactos$desc_lbl[j], "</td>",
-          "<td class='col-num'>R$ ", formatar_brl(itens_compactos$val_desc[j]), "</td>",
-          "<td class='col-num'>", itens_compactos$pct_desc[j], "%</td>",
+          "<td>", itens_por_consumo$item_lbl[j], "</td>",
+          "<td>", itens_por_consumo$desc_html[j], "</td>",
+          "<td class='col-num'>R$ ", formatar_brl(itens_por_consumo$val_item[j]), "</td>",
+          "<td class='col-num'>", itens_por_consumo$pct_item[j], "%</td>",
           cel_tot_forma,
           "</tr>"
         ))
@@ -553,10 +519,11 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     )
   }
   
+  # Ordem solicitada: 1º Resumo Estatístico -> 2º Tabela
   base::paste0(
-    cabecalho_card,
-    tabela_final,
-    montar_barra_metricas(vals, extra_quartis = quartis_lista)
+    bloco_resumo,
+    "<div class='subtitulo-card-alf'>Detalhamento dos Lançamentos</div>",
+    tabela_final
   )
 }
 
@@ -587,12 +554,12 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   
   # Vetores para alimentar o Boxplot
   box_cats        <- base::as.character(escopo_meses$eixo_x)
+  box_periodos    <- base::as.character(escopo_meses$mes_label)
   box_e_x         <- base::character(0)
   box_e_y         <- base::numeric(0)
   box_s_x         <- base::character(0)
   box_s_y         <- base::numeric(0)
   
-  # Pontos individuais do Boxplot
   pts_e_x         <- base::numeric(0)
   pts_e_y         <- base::numeric(0)
   pts_e_hov       <- base::character(0)
@@ -605,7 +572,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   pts_s_cor       <- base::character(0)
   pts_s_tam       <- base::numeric(0)
   
-  # Linha tracejada da Média de cada Boxplot
   med_e_x0        <- base::numeric(0)
   med_e_x1        <- base::numeric(0)
   med_e_y         <- base::numeric(0)
@@ -632,7 +598,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     box_card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas", incluir_quartis = TRUE)
     box_card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas",   incluir_quartis = TRUE)
     
-    # --- ENTRADAS NO MÊS i (Quartis com type = 5 idênticos ao Plotly) ---
     if (base::nrow(sub_e) > 0) {
       vals_e    <- sub_e$valor
       qs_e      <- calcular_quartis_plotly(vals_e)
@@ -662,7 +627,6 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       med_e_y   <- base::c(med_e_y, val_med_e)
     }
     
-    # --- SAÍDAS NO MÊS i (Quartis com type = 5 idênticos ao Plotly) ---
     if (base::nrow(sub_s) > 0) {
       vals_s    <- sub_s$valor
       qs_s      <- calcular_quartis_plotly(vals_s)
@@ -695,14 +659,15 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   
   # Dados para Barras Empilhadas e Linhas
   if (mes_sel == "Todos os Meses") {
-    n_pts       <- base::nrow(escopo_meses)
-    eixo_x_vec  <- base::as.character(escopo_meses$eixo_x)
-    y_e         <- base::numeric(n_pts)
-    y_s         <- base::numeric(n_pts)
-    hov_e       <- base::character(n_pts)
-    hov_s       <- base::character(n_pts)
-    card_e_html <- base::character(n_pts)
-    card_s_html <- base::character(n_pts)
+    n_pts        <- base::nrow(escopo_meses)
+    eixo_x_vec   <- base::as.character(escopo_meses$eixo_x)
+    periodos_vec <- base::as.character(escopo_meses$mes_label)
+    y_e          <- base::numeric(n_pts)
+    y_s          <- base::numeric(n_pts)
+    hov_e        <- base::character(n_pts)
+    hov_s        <- base::character(n_pts)
+    card_e_html  <- base::character(n_pts)
+    card_s_html  <- base::character(n_pts)
     
     for (i in base::seq_len(n_pts)) {
       m_ref <- escopo_meses$mes_ref[i]
@@ -730,26 +695,28 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       dplyr::pull(data)
     
     if (base::length(dias_ativos) == 0) {
-      eixo_x_vec  <- base::c("<b>Sem lançamentos</b>")
-      y_e         <- base::c(0)
-      y_s         <- base::c(0)
-      hov_e       <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Entradas"))
-      hov_s       <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Saídas"))
-      card_e_html <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas", FALSE))
-      card_s_html <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas",   FALSE))
+      eixo_x_vec   <- base::c("<b>Sem lançamentos</b>")
+      periodos_vec <- base::c(mes_sel)
+      y_e          <- base::c(0)
+      y_s          <- base::c(0)
+      hov_e        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Entradas"))
+      hov_s        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Saídas"))
+      card_e_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas", FALSE))
+      card_s_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas",   FALSE))
     } else {
-      n_pts       <- base::length(dias_ativos)
-      eixo_x_vec  <- base::paste0("<b>", base::format(dias_ativos, "%d"), "</b>")
-      y_e         <- base::numeric(n_pts)
-      y_s         <- base::numeric(n_pts)
-      hov_e       <- base::character(n_pts)
-      hov_s       <- base::character(n_pts)
-      card_e_html <- base::character(n_pts)
-      card_s_html <- base::character(n_pts)
+      n_pts        <- base::length(dias_ativos)
+      eixo_x_vec   <- base::paste0("<b>", base::format(dias_ativos, "%d"), "</b>")
+      periodos_vec <- base::format(dias_ativos, "%d/%m/%Y")
+      y_e          <- base::numeric(n_pts)
+      y_s          <- base::numeric(n_pts)
+      hov_e        <- base::character(n_pts)
+      hov_s        <- base::character(n_pts)
+      card_e_html  <- base::character(n_pts)
+      card_s_html  <- base::character(n_pts)
       
       for (i in base::seq_len(n_pts)) {
         dia_i   <- dias_ativos[i]
-        lbl_dia <- base::format(dia_i, "%d/%m/%Y")
+        lbl_dia <- periodos_vec[i]
         
         sub_e <- d_mes %>% dplyr::filter(data == dia_i, tipo == "Entradas")
         sub_s <- d_mes %>% dplyr::filter(data == dia_i, tipo == "Saídas")
@@ -779,62 +746,57 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   dif   <- tot_e - tot_s
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
   
-  val_e_fmt   <- base::paste0("R$ ", formatar_brl(tot_e))
-  val_s_fmt   <- base::paste0("R$ ", formatar_brl(tot_s))
-  val_dif_fmt <- base::paste0(sinal, "R$ ", formatar_brl(base::abs(dif)))
-  
-  nome_e   <- base::paste0("<b>Entradas: ", val_e_fmt, "</b>")
-  nome_s   <- base::paste0("<b>Saídas: ", val_s_fmt, "</b>")
-  nome_dif <- base::paste0("<b>Diferença: ", val_dif_fmt, "</b>")
+  nome_e   <- base::paste0("<b>Entradas: R$ ", formatar_brl(tot_e), "</b>")
+  nome_s   <- base::paste0("<b>Saídas: R$ ", formatar_brl(tot_s), "</b>")
+  nome_dif <- base::paste0("<b>Diferença: ", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
   
   base::list(
-    x           = base::as.character(eixo_x_vec),
-    e_y         = base::as.numeric(y_e),
-    s_y         = base::as.numeric(y_s),
-    e_txt_bar   = base::as.character(txt_e_bar),
-    s_txt_bar   = base::as.character(txt_s_bar),
-    e_txt_line  = base::as.character(txt_e_line),
-    s_txt_line  = base::as.character(txt_s_line),
-    e_hover     = base::as.character(hov_e),
-    s_hover     = base::as.character(hov_s),
-    card_e      = base::as.character(card_e_html),
-    card_s      = base::as.character(card_s_html),
+    x            = base::as.character(eixo_x_vec),
+    periodos     = base::as.character(periodos_vec),
+    e_y          = base::as.numeric(y_e),
+    s_y          = base::as.numeric(y_s),
+    e_txt_bar    = base::as.character(txt_e_bar),
+    s_txt_bar    = base::as.character(txt_s_bar),
+    e_txt_line   = base::as.character(txt_e_line),
+    s_txt_line   = base::as.character(txt_s_line),
+    e_hover      = base::as.character(hov_e),
+    s_hover      = base::as.character(hov_s),
+    card_e       = base::as.character(card_e_html),
+    card_s       = base::as.character(card_s_html),
     # Vetores do Boxplot
-    box_cats    = base::as.character(box_cats),
-    box_e_x     = base::as.character(box_e_x),
-    box_e_y     = base::as.numeric(box_e_y),
-    box_s_x     = base::as.character(box_s_x),
-    box_s_y     = base::as.numeric(box_s_y),
-    pts_e_x     = base::as.numeric(pts_e_x),
-    pts_e_y     = base::as.numeric(pts_e_y),
-    pts_e_hov   = base::as.character(pts_e_hov),
-    pts_e_cor   = base::as.character(pts_e_cor),
-    pts_e_tam   = base::as.numeric(pts_e_tam),
-    pts_s_x     = base::as.numeric(pts_s_x),
-    pts_s_y     = base::as.numeric(pts_s_y),
-    pts_s_hov   = base::as.character(pts_s_hov),
-    pts_s_cor   = base::as.character(pts_s_cor),
-    pts_s_tam   = base::as.numeric(pts_s_tam),
-    med_e_x0    = base::as.numeric(med_e_x0),
-    med_e_x1    = base::as.numeric(med_e_x1),
-    med_e_y     = base::as.numeric(med_e_y),
-    med_s_x0    = base::as.numeric(med_s_x0),
-    med_s_x1    = base::as.numeric(med_s_x1),
-    med_s_y     = base::as.numeric(med_s_y),
-    box_res_e_y = base::as.numeric(box_res_e_y),
-    box_res_s_y = base::as.numeric(box_res_s_y),
-    box_card_e  = base::as.character(box_card_e_html),
-    box_card_s  = base::as.character(box_card_s_html),
-    e_nome      = nome_e,
-    s_nome      = nome_s,
-    dif_nome    = nome_dif,
-    e_val_fmt   = val_e_fmt,
-    s_val_fmt   = val_s_fmt,
-    dif_val_fmt = val_dif_fmt,
-    dif_cor     = base::ifelse(dif >= 0, "#15803d", "#b91c1c"),
-    max_bar     = base::as.numeric(max_bar)[1],
-    max_line    = base::as.numeric(max_line)[1],
-    max_box     = base::as.numeric(max_box)[1]
+    box_cats     = base::as.character(box_cats),
+    box_periodos = base::as.character(box_periodos),
+    box_e_x      = base::as.character(box_e_x),
+    box_e_y      = base::as.numeric(box_e_y),
+    box_s_x      = base::as.character(box_s_x),
+    box_s_y      = base::as.numeric(box_s_y),
+    pts_e_x      = base::as.numeric(pts_e_x),
+    pts_e_y      = base::as.numeric(pts_e_y),
+    pts_e_hov    = base::as.character(pts_e_hov),
+    pts_e_cor    = base::as.character(pts_e_cor),
+    pts_e_tam    = base::as.numeric(pts_e_tam),
+    pts_s_x      = base::as.numeric(pts_s_x),
+    pts_s_y      = base::as.numeric(pts_s_y),
+    pts_s_hov    = base::as.character(pts_s_hov),
+    pts_s_cor    = base::as.character(pts_s_cor),
+    pts_s_tam    = base::as.numeric(pts_s_tam),
+    med_e_x0     = base::as.numeric(med_e_x0),
+    med_e_x1     = base::as.numeric(med_e_x1),
+    med_e_y      = base::as.numeric(med_e_y),
+    med_s_x0     = base::as.numeric(med_s_x0),
+    med_s_x1     = base::as.numeric(med_s_x1),
+    med_s_y      = base::as.numeric(med_s_y),
+    box_res_e_y  = base::as.numeric(box_res_e_y),
+    box_res_s_y  = base::as.numeric(box_res_s_y),
+    box_card_e   = base::as.character(box_card_e_html),
+    box_card_s   = base::as.character(box_card_s_html),
+    e_nome       = nome_e,
+    s_nome       = nome_s,
+    dif_nome     = nome_dif,
+    dif_cor      = base::ifelse(dif >= 0, "#15803d", "#b91c1c"),
+    max_bar      = base::as.numeric(max_bar)[1],
+    max_line     = base::as.numeric(max_line)[1],
+    max_box      = base::as.numeric(max_box)[1]
   )
 }
 
@@ -856,7 +818,7 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM CARDS KPI DINÂMICOS)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
@@ -873,22 +835,15 @@ function(el, x) {
   let indiceClicado = null;
   let serieClicada  = 0;
 
-  const selMes         = painel.querySelector('.select-mes-alf');
-  const botoesUsuario  = painel.querySelectorAll('.btn-usuario-alf');
-  const botoesModo     = painel.querySelectorAll('.btn-modo-alf');
-  
-  // Elementos dos 3 Cards KPI (Saídas, Entradas, Diferença)
-  const kpiTitSaidas   = painel.querySelector('.kpi-titulo-saidas');
-  const kpiValSaidas   = painel.querySelector('.kpi-valor-saidas');
-  const kpiTitEntradas = painel.querySelector('.kpi-titulo-entradas');
-  const kpiValEntradas = painel.querySelector('.kpi-valor-entradas');
-  const kpiTitDif      = painel.querySelector('.kpi-titulo-diferenca');
-  const kpiValDif      = painel.querySelector('.kpi-valor-diferenca');
-  const kpiCardDif     = painel.querySelector('.kpi-card-diferenca');
-  const quadDiferenca  = painel.querySelector('.quadrado-diferenca');
-  
-  const legBoxplotDir  = painel.querySelector('.legenda-boxplot-direita-alf');
-  const cardDetalhes   = painel.querySelector('.card-hover-mobile-alf');
+  const selMes        = painel.querySelector('.select-mes-alf');
+  const botoesUsuario = painel.querySelectorAll('.btn-usuario-alf');
+  const botoesModo    = painel.querySelectorAll('.btn-modo-alf');
+  const legEntradas   = painel.querySelector('.leg-texto-entradas');
+  const legSaidas     = painel.querySelector('.leg-texto-saidas');
+  const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
+  const quadDiferenca = painel.querySelector('.quadrado-diferenca');
+  const legBoxplotDir = painel.querySelector('.legenda-boxplot-direita-alf');
+  const cardDetalhes  = painel.querySelector('.card-hover-mobile-alf');
 
   function formatarMoedaJS(v) {
     return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -898,15 +853,22 @@ function(el, x) {
     return (modoAtual === 'boxplot') ? (d.box_cats || []) : (d.x || []);
   }
 
+  function obterPeriodosAtuais(d) {
+    return (modoAtual === 'boxplot') ? (d.box_periodos || []) : (d.periodos || []);
+  }
+
   function atualizarCardInterativo(d) {
     if (!cardDetalhes) return;
-    const cats = obterCategoriasAtuais(d);
+    const cats     = obterCategoriasAtuais(d);
+    const periodos = obterPeriodosAtuais(d);
 
     if (indiceClicado === null || !cats.length || indiceClicado >= cats.length) {
       cardDetalhes.style.display = 'none';
       cardDetalhes.innerHTML = '';
       return;
     }
+
+    const rotPeriodo = periodos[indiceClicado] || String(cats[indiceClicado] || '').replace(/<[^>]*>/g, '');
 
     const htmlE = (modoAtual === 'boxplot')
       ? (d.box_card_e[indiceClicado] || '')
@@ -917,11 +879,12 @@ function(el, x) {
 
     const htmlAtivo = (serieClicada === 1) ? htmlS : htmlE;
 
+    // Abas dinâmicas com o nome do Mês/Ano (ex: 'Entradas Setembro/2026' | 'Saídas Setembro/2026')
     cardDetalhes.innerHTML =
       '<div class=\"topo-card-mobile-alf\">' +
         '<div class=\"abas-card-mobile-alf\">' +
-          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 0 ? 'ativa-e' : '') + '\" data-serie=\"0\">Entradas</button>' +
-          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 1 ? 'ativa-s' : '') + '\" data-serie=\"1\">Saídas</button>' +
+          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 0 ? 'ativa-e' : '') + '\" data-serie=\"0\">Entradas ' + rotPeriodo + '</button>' +
+          '<button type=\"button\" class=\"aba-mob-alf ' + (serieClicada === 1 ? 'ativa-s' : '') + '\" data-serie=\"1\">Saídas ' + rotPeriodo + '</button>' +
         '</div>' +
         '<button type=\"button\" class=\"fechar-card-mobile-alf\" title=\"Fechar\">&times;</button>' +
       '</div>' +
@@ -959,30 +922,20 @@ function(el, x) {
       const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
       const rotX  = String(cats[indiceClicado] || '').replace(/<[^>]*>/g, '');
 
-      if (kpiTitSaidas)   kpiTitSaidas.textContent   = 'Saídas (' + rotX + ')';
-      if (kpiValSaidas)   kpiValSaidas.textContent   = 'R$ ' + formatarMoedaJS(valS);
-      if (kpiTitEntradas) kpiTitEntradas.textContent = 'Entradas (' + rotX + ')';
-      if (kpiValEntradas) kpiValEntradas.textContent = 'R$ ' + formatarMoedaJS(valE);
-      if (kpiTitDif)      kpiTitDif.textContent      = 'Diferença (' + rotX + ')';
-      if (kpiValDif)      kpiValDif.textContent      = sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif));
-      if (kpiValDif)      kpiValDif.style.color      = corD;
-      if (quadDiferenca)  quadDiferenca.style.background = corD;
-      if (kpiCardDif)     kpiCardDif.style.borderTopColor = corD;
+      if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
+      if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
+      if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+      if (quadDiferenca) quadDiferenca.style.background = corD;
     } else {
-      const valE   = Array.isArray(d.e_val_fmt)   ? d.e_val_fmt[0]   : d.e_val_fmt;
-      const valS   = Array.isArray(d.s_val_fmt)   ? d.s_val_fmt[0]   : d.s_val_fmt;
-      const valDif = Array.isArray(d.dif_val_fmt) ? d.dif_val_fmt[0] : d.dif_val_fmt;
-      const corDif = Array.isArray(d.dif_cor)     ? d.dif_cor[0]     : d.dif_cor;
+      const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
+      const nomeS   = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
+      const nomeDif = Array.isArray(d.dif_nome) ? d.dif_nome[0] : d.dif_nome;
+      const corDif  = Array.isArray(d.dif_cor)  ? d.dif_cor[0]  : d.dif_cor;
 
-      if (kpiTitSaidas)   kpiTitSaidas.textContent   = 'Saídas';
-      if (kpiValSaidas)   kpiValSaidas.textContent   = valS;
-      if (kpiTitEntradas) kpiTitEntradas.textContent = 'Entradas';
-      if (kpiValEntradas) kpiValEntradas.textContent = valE;
-      if (kpiTitDif)      kpiTitDif.textContent      = 'Diferença';
-      if (kpiValDif)      kpiValDif.textContent      = valDif;
-      if (kpiValDif)      kpiValDif.style.color      = corDif;
-      if (quadDiferenca)  quadDiferenca.style.background = corDif;
-      if (kpiCardDif)     kpiCardDif.style.borderTopColor = corDif;
+      if (legEntradas)  legEntradas.innerHTML  = nomeE;
+      if (legSaidas)    legSaidas.innerHTML    = nomeS;
+      if (legDiferenca) legDiferenca.innerHTML = nomeDif;
+      if (quadDiferenca) quadDiferenca.style.background = corDif;
     }
   }
 
@@ -1506,7 +1459,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (COM CARDS KPI MODERNOS E DINÂMICOS)
+# 8. ESTILO CSS E ESTRUTURA HTML (CAIXINHAS ESTILO BARRA SUPERIOR + TABELA ABNT)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1557,13 +1510,13 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   .cabecalho-grafico-alf {
     text-align: left;
     padding: 0 2px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .titulo-grafico-alf {
     color: ", titulo_cor, ";
     font-size: ", titulo_tamanho, "px;
     font-weight: 700;
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
     line-height: 1.25;
   }
   .linha-legendas-topo-alf {
@@ -1571,69 +1524,41 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
     width: 100%;
   }
 
   /* =========================================================
-     CARDS KPI (CAIXINHAS ELEGANTES DE SAÍDAS, ENTRADAS E DIFERENÇA)
+     CAIXINHAS HORIZONTAIS COMPACTAS (MESMO ESTILO DA BARRA DE FILTROS)
      ========================================================= */
-  .grade-kpis-alf {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(165px, 215px));
-    gap: 12px;
+  .legenda-custom-alf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
     margin: 0;
     padding: 0;
   }
-  .kpi-card-alf {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 4px;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-  }
-  .kpi-card-alf:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  }
-  .kpi-card-saidas {
-    border-top: 3.5px solid ", cor_saidas, ";
-  }
-  .kpi-card-entradas {
-    border-top: 3.5px solid ", cor_entradas, ";
-  }
-  .kpi-card-diferenca {
-    border-top: 3.5px solid ", estado_ini$dif_cor[1], ";
-  }
-  .kpi-topo-alf {
+  .item-legenda-alf {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #64748b;
-    letter-spacing: 0.01em;
+    gap: 8px;
+    font-size: ", tamanho_legenda, "px;
+    color: #111111;
+    background: #fcfcfc;
+    border: 1px solid #dcdcdc;
+    border-top: 2px solid #000000;
+    border-radius: 0 0 8px 8px;
+    padding: 6px 13px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: all 0.15s ease;
   }
   .quadrado-legenda-alf {
-    width: 10px;
-    height: 10px;
-    border-radius: 2.5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
     display: inline-block;
     flex-shrink: 0;
-  }
-  .kpi-valor-alf {
-    font-size: 16.5px;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
   }
 
   .legenda-boxplot-direita-alf {
@@ -1641,10 +1566,11 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 7px 13px;
+    background: #fcfcfc;
+    border: 1px solid #dcdcdc;
+    border-top: 2px solid #000000;
+    border-radius: 0 0 8px 8px;
+    padding: 6px 13px;
     font-size: 11.5px;
     color: #1e293b;
   }
@@ -1776,7 +1702,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     CARD INFERIOR COM TABELA COMPACTA E DETALHES EXPANSÍVEIS
+     CARD INFERIOR ESTILO ABNT PURO (SEM BORDAS DESTONANTES)
      ========================================================= */
   .card-hover-mobile-alf {
     display: none;
@@ -1785,47 +1711,54 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     margin-top: 12px;
     padding: 14px 18px;
     background: #ffffff;
-    border: 1.5px solid #000000;
-    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    border-top: 2px solid #000000;
+    border-radius: 0 0 10px 10px;
     font-size: 12px;
     line-height: 1.45;
     color: #000000;
     text-align: left;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
   .topo-card-mobile-alf {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #e5e7eb;
   }
   .abas-card-mobile-alf {
     display: inline-flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .aba-mob-alf {
     font-family: inherit;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 5px 14px;
+    padding: 6px 14px;
     border-radius: 6px;
-    border: 1px solid #d1d5db;
-    background: #f8f9fa;
-    color: #333333;
+    border: 1px solid #d0d0d0;
+    background: #ffffff;
+    color: #222222;
     cursor: pointer;
     transition: all 0.15s ease;
+  }
+  .aba-mob-alf:hover:not(.ativa-e):not(.ativa-s) {
+    border-color: #000000;
   }
   .aba-mob-alf.ativa-e {
     background: ", cor_entradas, ";
     border-color: ", cor_entradas, ";
     color: #ffffff;
+    box-shadow: 0 2px 5px rgba(41, 182, 216, 0.25);
   }
   .aba-mob-alf.ativa-s {
     background: ", cor_saidas, ";
     border-color: ", cor_saidas, ";
     color: #ffffff;
+    box-shadow: 0 2px 5px rgba(27, 120, 161, 0.25);
   }
   .fechar-card-mobile-alf {
     background: transparent;
@@ -1836,19 +1769,51 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     cursor: pointer;
     padding: 0 4px;
   }
-  .titulo-card-tab {
-    font-size: 14px;
+  .subtitulo-card-alf {
+    font-size: 11px;
     font-weight: 700;
-    margin-bottom: 10px;
-    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin: 0 0 6px 0;
   }
+  .secao-resumo-estatistico {
+    margin-bottom: 14px;
+  }
+  .barra-metricas-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    background: #fcfcfc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    color: #1e293b;
+  }
+  .pilula-metrica-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  .pilula-metrica-card span {
+    color: #555555;
+    font-weight: 500;
+  }
+  .pilula-metrica-card b {
+    color: #000000;
+    font-weight: 700;
+  }
+
+  /* Tabela em estilo ABNT limpo (apenas linhas horizontais, sem barra vertical presa) */
   .wrapper-tabela-card {
     width: 100%;
-    max-height: 360px;
-    overflow-y: auto;
     overflow-x: auto;
-    margin-bottom: 12px;
-    border-bottom: 1.5px solid #000000;
   }
   .tabela-resumo-card {
     width: 100%;
@@ -1856,63 +1821,36 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-size: 12px;
   }
   .tabela-resumo-card thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
     text-align: center;
     font-weight: 700;
-    color: #0f172a;
-    background: #f8fafc;
+    color: #000000;
+    background: #ffffff;
     padding: 8px 10px;
     border-top: 1.5px solid #000000;
-    border-bottom: 1.5px solid #000000;
+    border-bottom: 1px solid #000000;
     white-space: nowrap;
   }
   .tabela-resumo-card td {
     text-align: center;
-    padding: 6px 10px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #1e293b;
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #222222;
     vertical-align: middle;
   }
-  .tabela-resumo-card .cel-mesclada {
-    background: #fcfcfd;
-    border-right: 1px solid #e2e8f0;
-    border-left: 1px solid #e2e8f0;
-    vertical-align: top;
-    padding-top: 10px;
-  }
+  .tabela-resumo-card .cel-mesclada,
   .tabela-resumo-card .cel-mesclada-sub {
     background: #ffffff;
-    border-right: 1px solid #e2e8f0;
-    vertical-align: top;
-    padding-top: 10px;
-    color: #1e293b;
-  }
-  .tabela-resumo-card .cel-mesclada-item {
-    background: #ffffff;
-    border-right: 1px solid #f1f5f9;
-    vertical-align: top;
-    padding-top: 8px;
-    font-weight: 600;
-    color: #334155;
-  }
-  .sticky-cel {
-    position: sticky;
-    top: 38px;
+    vertical-align: middle;
   }
   .tabela-resumo-card tr.fim-subitem-row td {
-    border-bottom: 1px solid #cbd5e1;
+    border-bottom: 1px solid #e5e7eb;
   }
   .tabela-resumo-card tr.fim-grupo-row td {
-    border-bottom: 1.5px solid #94a3b8;
+    border-bottom: 1px solid #cccccc;
   }
   .tabela-resumo-card tr.linha-total-card td {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-    background: #f8fafc;
-    border-top: 1.5px solid #000000;
+    background: #fcfcfc;
+    border-top: 1px solid #000000;
     border-bottom: 1.5px solid #000000;
     font-weight: 700;
     color: #000000;
@@ -1920,32 +1858,54 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
   .detalhes-extras-card {
     display: inline-block;
-    text-align: left;
+    text-align: center;
   }
   .detalhes-extras-card summary {
     cursor: pointer;
-    color: #0369a1;
-    font-weight: 600;
-    font-size: 11px;
     list-style: none;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    padding: 2px 8px;
-    border-radius: 12px;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .detalhes-extras-card summary::-webkit-details-marker {
     display: none;
   }
+  .pilula-ver-mais {
+    color: #03045e;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 1px 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .pilula-ver-mais:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+  }
   .lista-oculta-card {
-    margin-top: 5px;
-    padding: 6px 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #fcfcfc;
+    border: 1px solid #e0e0e0;
     border-radius: 6px;
     font-size: 11px;
-    color: #334155;
-    line-height: 1.4;
+    color: #333333;
+    text-align: left;
+    min-width: 210px;
+  }
+  .item-lista-oculta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0;
+    border-bottom: 1px dashed #eeeeee;
+  }
+  .item-lista-oculta:last-child {
+    border-bottom: none;
   }
   .badge-n {
     color: #64748b;
@@ -1956,38 +1916,8 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     text-align: center;
     white-space: nowrap;
   }
-  .barra-metricas-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 11.5px;
-    color: #1e293b;
-  }
-  .pilula-metrica-card {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 4px 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-  }
-  .pilula-metrica-card span {
-    color: #64748b;
-    font-weight: 600;
-  }
-  .pilula-metrica-card b {
-    color: #0f172a;
-    font-weight: 700;
-  }
 
-  /* Responsividade Mobile para os Cards KPI e Tabelas */
+  /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot */
   @media (max-width: 768px) {
     .painel-fluxo-alf:not(.modo-boxplot-ativo) .hoverlayer {
       display: none !important;
@@ -2030,25 +1960,19 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       font-size: 13.5px;
       margin-bottom: 8px;
     }
-    .grade-kpis-alf {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+    .legenda-custom-alf {
       width: 100%;
+      gap: 6px;
     }
-    .kpi-card-alf {
-      padding: 7px 8px;
-      border-radius: 8px;
-    }
-    .kpi-topo-alf {
-      font-size: 10px;
-      gap: 4px;
+    .item-legenda-alf {
+      font-size: 11px;
+      padding: 5px 9px;
+      gap: 6px;
+      flex: 1 1 auto;
     }
     .quadrado-legenda-alf {
-      width: 8px;
-      height: 8px;
-    }
-    .kpi-valor-alf {
-      font-size: 12px;
+      width: 10px;
+      height: 10px;
     }
     .legenda-boxplot-direita-alf {
       width: 100%;
@@ -2058,6 +1982,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     }
     .card-hover-mobile-alf {
       padding: 10px 12px;
+    }
+    .aba-mob-alf {
+      font-size: 11px;
+      padding: 5px 10px;
     }
     .tabela-resumo-card {
       font-size: 11px;
@@ -2131,54 +2059,30 @@ controles_html <- htmltools::tags$div(
   )
 )
 
-# Cabeçalho com os 3 Cards KPI (Saídas, Entradas e Diferença) e Legenda lateral do Boxplot
+# Cabeçalho com as 3 Caixinhas Horizontais Compactas (estilo barra de filtros)
 cabecalho_html <- htmltools::tags$div(
   class = "cabecalho-grafico-alf",
   htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome),
   htmltools::tags$div(
     class = "linha-legendas-topo-alf",
     htmltools::tags$div(
-      class = "grade-kpis-alf",
-      
-      # Card 1: Saídas
-      htmltools::tags$div(
-        class = "kpi-card-alf kpi-card-saidas",
-        htmltools::tags$div(
-          class = "kpi-topo-alf",
-          htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_saidas, ";")),
-          htmltools::tags$span(class = "kpi-titulo-saidas", "Saídas")
-        ),
-        htmltools::tags$div(class = "kpi-valor-alf kpi-valor-saidas", estado_ini$s_val_fmt[1])
+      class = "legenda-custom-alf",
+      htmltools::tags$span(
+        class = "item-legenda-alf",
+        htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_saidas, ";")),
+        htmltools::tags$span(class = "leg-texto-saidas", htmltools::HTML(estado_ini$s_nome[1]))
       ),
-      
-      # Card 2: Entradas
-      htmltools::tags$div(
-        class = "kpi-card-alf kpi-card-entradas",
-        htmltools::tags$div(
-          class = "kpi-topo-alf",
-          htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_entradas, ";")),
-          htmltools::tags$span(class = "kpi-titulo-entradas", "Entradas")
-        ),
-        htmltools::tags$div(class = "kpi-valor-alf kpi-valor-entradas", estado_ini$e_val_fmt[1])
+      htmltools::tags$span(
+        class = "item-legenda-alf",
+        htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_entradas, ";")),
+        htmltools::tags$span(class = "leg-texto-entradas", htmltools::HTML(estado_ini$e_nome[1]))
       ),
-      
-      # Card 3: Diferença (Dinâmico Verde/Vermelho)
-      htmltools::tags$div(
-        class = "kpi-card-alf kpi-card-diferenca",
-        htmltools::tags$div(
-          class = "kpi-topo-alf",
-          htmltools::tags$span(class = "quadrado-legenda-alf quadrado-diferenca", style = base::paste0("background:", estado_ini$dif_cor[1], ";")),
-          htmltools::tags$span(class = "kpi-titulo-diferenca", "Diferença")
-        ),
-        htmltools::tags$div(
-          class = "kpi-valor-alf kpi-valor-diferenca",
-          style = base::paste0("color:", estado_ini$dif_cor[1], ";"),
-          estado_ini$dif_val_fmt[1]
-        )
+      htmltools::tags$span(
+        class = "item-legenda-alf",
+        htmltools::tags$span(class = "quadrado-legenda-alf quadrado-diferenca", style = base::paste0("background:", estado_ini$dif_cor[1], ";")),
+        htmltools::tags$span(class = "leg-texto-diferenca", htmltools::HTML(estado_ini$dif_nome[1]))
       )
     ),
-    
-    # Legenda lateral do Boxplot
     htmltools::tags$div(
       class = "legenda-boxplot-direita-alf",
       htmltools::tags$span(
