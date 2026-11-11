@@ -2,12 +2,15 @@
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
 # Ajustes implementados:
-#   1. Ordenação Hierárquica Inteligente ao clicar nos cabeçalhos da tabela
-#      (ordena valores e textos preservando e reconstruindo o rowspan automaticamente,
-#      sem setas visuais, com cursor pointer e mantendo a linha Total fixa no rodapé!).
-#   2. KPIs minimalistas integrados dentro da barra de filtros.
-#   3. Ícones Bootstrap nos cabeçalhos + "%" sem parênteses + Total por Item de Consumo.
-#   4. Tabela de Resumo Estatístico compacta e sem sombra/caixa externa duplicada.
+#   1. Removidas as 2 últimas colunas ("Total" e "%"), mantendo apenas UMA coluna
+#      de "Valor" e UMA de "%" no final da tabela.
+#   2. Células mescladas (Fonte de Renda, Forma de Pagamento, Tipo de Despesa e
+#      Item de Consumo) agora exibem de forma organizada:
+#        Nome (n)
+#        R$ Valor Total · %
+#   3. Resumo Estatístico completo (Média, Mediana, Q1, Q3, IIQ, Máx, Mín, Amplitude)
+#      sempre visível em todas as abas e super compacto.
+#   4. Ordenação inteligente ao clicar nos cabeçalhos preservando o rowspan.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -76,6 +79,45 @@ formatar_celula_moeda <- function(x, negrito = FALSE) {
   base::paste0(
     "<div class='celula-moeda-alf' style='", peso, "'>",
     "<span>R$</span><span>", formatar_brl(x), "</span>",
+    "</div>"
+  )
+}
+
+# Bloco empilhado super organizado para as células mescladas:
+#   Linha 1: Nome
+#   Linha 2: (n)
+#   Linha 3: R$ Valor Total (ou R$ Valor · %)
+montar_bloco_categoria <- function(nome, n = NULL, valor_total = NULL, pct_total = NULL, negrito_nome = TRUE) {
+  tag_nome <- if (negrito_nome) {
+    base::paste0("<span class='cat-nome-negrito'>", nome, "</span>")
+  } else {
+    base::paste0("<span class='cat-nome-normal'>", nome, "</span>")
+  }
+  
+  linha_n <- if (!base::is.null(n)) {
+    base::paste0("<span class='cat-badge-n'>(", n, ")</span>")
+  } else {
+    ""
+  }
+  
+  linha_val_pct <- if (!base::is.null(valor_total) && !base::is.null(pct_total)) {
+    base::paste0(
+      "<div class='cat-linha-val'>",
+      "<span class='cat-val-txt'>R$ ", formatar_brl(valor_total), "</span>",
+      "<span class='cat-sep-dot'>·</span>",
+      "<span class='cat-pct-txt'>", pct_total, "%</span>",
+      "</div>"
+    )
+  } else if (!base::is.null(valor_total)) {
+    base::paste0("<div class='cat-linha-val'><span class='cat-val-txt'>R$ ", formatar_brl(valor_total), "</span></div>")
+  } else {
+    ""
+  }
+  
+  base::paste0(
+    "<div class='bloco-empilhado-alf'>",
+    "<div class='cat-linha-topo'>", tag_nome, " ", linha_n, "</div>",
+    linha_val_pct,
     "</div>"
   )
 }
@@ -161,7 +203,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER E TABELAS ORDENÁVEIS COM MESCLAGEM DINÂMICA (ROWSPAN)
+# 4. FUNÇÕES DE HOVER E TABELAS ENXUTAS (SEM AS 2 ÚLTIMAS COLUNAS REDUNDANTES)
 # ==============================================================================
 
 # 4.1 Hover flutuante (PC) para Barras e Linhas
@@ -235,48 +277,35 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# 4.2 Resumo Estatístico como Mini-Tabela Compacta
-montar_tabela_metricas <- function(vals, extra_quartis = NULL) {
+# 4.2 Resumo Estatístico Super Compacto (SEMPRE exibe Média, Mediana, Q1, Q3, IIQ, Máx, Mín e Amplitude!)
+montar_tabela_metricas <- function(vals) {
+  qs        <- calcular_quartis_plotly(vals)
   val_media <- base::mean(vals, na.rm = TRUE)
   val_max   <- base::max(vals, na.rm = TRUE)
   val_min   <- base::min(vals, na.rm = TRUE)
   val_amp   <- val_max - val_min
   
-  if (!base::is.null(extra_quartis)) {
-    cab_cols <- base::paste0(
-      "<th><i class='bi bi-distribute-horizontal'></i> Mediana</th>",
-      "<th><i class='bi bi-bounding-box'></i> Q1 (25%)</th>",
-      "<th><i class='bi bi-bounding-box'></i> Q3 (75%)</th>",
-      "<th><i class='bi bi-arrows-expand'></i> IIQ</th>",
-      "<th><i class='bi bi-calculator'></i> Média</th>",
-      "<th><i class='bi bi-arrow-up-circle'></i> Máx</th>",
-      "<th><i class='bi bi-arrow-down-circle'></i> Mín</th>",
-      "<th><i class='bi bi-arrows-vertical'></i> Amplitude</th>"
-    )
-    val_cols <- base::paste0(
-      "<td class='cel-primeira-col'><b>R$ ", formatar_brl(extra_quartis$med), "</b></td>",
-      "<td>R$ ", formatar_brl(extra_quartis$q1), "</td>",
-      "<td>R$ ", formatar_brl(extra_quartis$q3), "</td>",
-      "<td>R$ ", formatar_brl(extra_quartis$iiq), "</td>",
-      "<td><b>R$ ", formatar_brl(val_media), "</b></td>",
-      "<td>R$ ", formatar_brl(val_max), "</td>",
-      "<td>R$ ", formatar_brl(val_min), "</td>",
-      "<td>R$ ", formatar_brl(val_amp), "</td>"
-    )
-  } else {
-    cab_cols <- base::paste0(
-      "<th><i class='bi bi-calculator'></i> Média</th>",
-      "<th><i class='bi bi-arrow-up-circle'></i> Máx</th>",
-      "<th><i class='bi bi-arrow-down-circle'></i> Mín</th>",
-      "<th><i class='bi bi-arrows-vertical'></i> Amplitude</th>"
-    )
-    val_cols <- base::paste0(
-      "<td class='cel-primeira-col'><b>R$ ", formatar_brl(val_media), "</b></td>",
-      "<td>R$ ", formatar_brl(val_max), "</td>",
-      "<td>R$ ", formatar_brl(val_min), "</td>",
-      "<td>R$ ", formatar_brl(val_amp), "</td>"
-    )
-  }
+  cab_cols <- base::paste0(
+    "<th><i class='bi bi-calculator'></i> Média</th>",
+    "<th><i class='bi bi-distribute-horizontal'></i> Mediana</th>",
+    "<th><i class='bi bi-bounding-box'></i> Q1 (25%)</th>",
+    "<th><i class='bi bi-bounding-box'></i> Q3 (75%)</th>",
+    "<th><i class='bi bi-arrows-expand'></i> IIQ</th>",
+    "<th><i class='bi bi-arrow-up-circle'></i> Máx</th>",
+    "<th><i class='bi bi-arrow-down-circle'></i> Mín</th>",
+    "<th><i class='bi bi-arrows-vertical'></i> Amplitude</th>"
+  )
+  
+  val_cols <- base::paste0(
+    "<td class='cel-primeira-col'><b>R$ ", formatar_brl(val_media), "</b></td>",
+    "<td><b>R$ ", formatar_brl(qs$med), "</b></td>",
+    "<td>R$ ", formatar_brl(qs$q1), "</td>",
+    "<td>R$ ", formatar_brl(qs$q3), "</td>",
+    "<td>R$ ", formatar_brl(qs$iiq), "</td>",
+    "<td>R$ ", formatar_brl(val_max), "</td>",
+    "<td>R$ ", formatar_brl(val_min), "</td>",
+    "<td>R$ ", formatar_brl(val_amp), "</td>"
+  )
   
   base::paste0(
     "<div class='secao-resumo-estatistico'>",
@@ -290,21 +319,23 @@ montar_tabela_metricas <- function(vals, extra_quartis = NULL) {
   )
 }
 
-# 4.3 Tabela Principal com atributos de ordenação hierárquica (permite clicar em qualquer coluna!)
-montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, incluir_quartis = FALSE) {
+# 4.3 Tabela Principal Enxuta:
+#   - Entradas (4 colunas): Fonte de Renda | Descrição | Valor | %
+#   - Saídas (6 colunas):   Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | %
+#   Todas as categorias mescladas trazem: Nome (n) + R$ Valor Total · %
+montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
   n_lanc <- base::nrow(df_sub)
   
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
     return("<div class='sem-dados-card'>Nenhum lançamento registrado neste período.</div>")
   }
   
-  val_total     <- base::sum(df_sub$valor, na.rm = TRUE)
-  vals          <- df_sub$valor
-  quartis_lista <- if (incluir_quartis) calcular_quartis_plotly(vals) else NULL
-  bloco_resumo  <- montar_tabela_metricas(vals, extra_quartis = quartis_lista)
+  val_total    <- base::sum(df_sub$valor, na.rm = TRUE)
+  vals         <- df_sub$valor
+  bloco_resumo <- montar_tabela_metricas(vals)
   
   if (tipo_sel == "Entradas") {
-    # ENTRADAS: Fonte de Renda | Descrição | Valor | % | Total | %
+    # ENTRADAS (4 colunas): Fonte de Renda | Descrição | Valor | %
     fontes_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -336,14 +367,18 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         dplyr::arrange(dplyr::desc(val_item)) %>%
         dplyr::mutate(
           pct_item = base::formatC((val_item / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
-          desc_lbl = base::ifelse(qtd_item > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_item, ")</span>"), descricao)
+          desc_lbl = base::ifelse(
+            qtd_item > 1,
+            base::paste0(descricao, " <span class='cat-badge-n'>(", qtd_item, ")</span>"),
+            descricao
+          )
         )
       
       k_rows <- base::nrow(itens_f)
       
-      html_col_fonte <- htmltools::htmlEscape(base::paste0("<b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span>"), attribute = TRUE)
-      html_col_tot   <- htmltools::htmlEscape(formatar_celula_moeda(tot_f, TRUE), attribute = TRUE)
-      html_col_pct   <- htmltools::htmlEscape(base::paste0("<b>", pct_f, "%</b>"), attribute = TRUE)
+      # Fonte de Renda com Nome (n) + R$ Valor Total · %
+      bloco_fonte_html <- montar_bloco_categoria(f_atual, n = n_f, valor_total = tot_f, pct_total = pct_f, negrito_nome = TRUE)
+      html_col_fonte   <- htmltools::htmlEscape(bloco_fonte_html, attribute = TRUE)
       
       for (j in base::seq_len(k_rows)) {
         html_col_desc <- htmltools::htmlEscape(itens_f$desc_lbl[j], attribute = TRUE)
@@ -359,20 +394,16 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           " data-h-g1='", html_col_fonte, "'",
           " data-h-desc='", html_col_desc, "'",
           " data-h-val='", html_col_val, "'",
-          " data-h-vpct='", html_col_vpct, "'",
-          " data-h-tot='", html_col_tot, "'",
-          " data-h-tpct='", html_col_pct, "'"
+          " data-h-vpct='", html_col_vpct, "'"
         )
         
         if (j == 1) {
           linhas_html <- base::c(linhas_html, base::paste0(
             "<tr", atributos_tr, ">",
-            "<td rowspan='", k_rows, "' class='cel-primeira-col'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>",
+            "<td rowspan='", k_rows, "' class='cel-primeira-col'>", bloco_fonte_html, "</td>",
             "<td>", itens_f$desc_lbl[j], "</td>",
             "<td>", formatar_celula_moeda(itens_f$val_item[j], FALSE), "</td>",
             "<td>", itens_f$pct_item[j], "%</td>",
-            "<td rowspan='", k_rows, "'>", formatar_celula_moeda(tot_f, TRUE), "</td>",
-            "<td rowspan='", k_rows, "'><b>", pct_f, "%</b></td>",
             "</tr>"
           ))
         } else {
@@ -389,10 +420,8 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     
     linha_total <- base::paste0(
       "<tr class='linha-total-dt'>",
-      "<td class='cel-primeira-col'><b>Total (", n_lanc, ")</b></td>",
+      "<td class='cel-primeira-col'><b>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
       "<td>—</td>",
-      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
-      "<td><b>100.0%</b></td>",
       "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
       "<td><b>100.0%</b></td>",
       "</tr>"
@@ -405,16 +434,15 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<th class='th-sort-alf' data-col='g1' title='Clique para ordenar por Fonte de Renda'><i class='bi bi-briefcase'></i> Fonte de Renda</th>",
       "<th class='th-sort-alf' data-col='desc' title='Clique para ordenar por Descrição'><i class='bi bi-file-earmark-text'></i> Descrição</th>",
       "<th class='th-sort-alf' data-col='val' title='Clique para ordenar por Valor'><i class='bi bi-cash-stack'></i> Valor</th>",
-      "<th class='th-sort-alf' data-col='val' title='Clique para ordenar por %'>%</th>",
-      "<th class='th-sort-alf' data-col='tot' title='Clique para ordenar por Total da Fonte'><i class='bi bi-calculator'></i> Total</th>",
-      "<th class='th-sort-alf' data-col='tot' title='Clique para ordenar por % do Total'>%</th>",
+      "<th class='th-sort-alf th-icone-pct' data-col='val' title='Clique para ordenar por Percentual'><i class='bi bi-percent'></i></th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
     )
     
   } else {
-    # SAÍDAS: Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | % | Total (por Item) | % (por Item)
+    # SAÍDAS (6 colunas): Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | %
+    # Nas 3 primeiras colunas mescladas entram: Nome (n) + R$ Valor · %
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -422,7 +450,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         tot_forma = base::sum(valor, na.rm = TRUE),
         .groups   = "drop"
       ) %>%
-      dplyr::arrange(dplyr::desc(tot_forma))
+      dplyr::arrange(dplyr::desc(tot_forma)) %>%
+      dplyr::mutate(
+        pct_forma = base::formatC((tot_forma / val_total) * 100, format = "f", digits = 1, decimal.mark = ".")
+      )
     
     linhas_html <- base::character(0)
     
@@ -430,12 +461,23 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       f_atual   <- formas_agr$grupo_1[idx_f]
       n_f       <- formas_agr$n_forma[idx_f]
       tot_f_num <- formas_agr$tot_forma[idx_f]
+      pct_f_txt <- formas_agr$pct_forma[idx_f]
       
       df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
       
-      qtd_por_tipo <- df_forma %>%
-        dplyr::count(grupo_2, name = "qtd_lanc_tipo")
+      # Quantidade, Soma e % de cada Tipo de Despesa
+      resumo_por_tipo <- df_forma %>%
+        dplyr::group_by(grupo_2) %>%
+        dplyr::summarise(
+          qtd_lanc_tipo = dplyr::n(),
+          soma_t        = base::sum(valor, na.rm = TRUE),
+          .groups       = "drop"
+        ) %>%
+        dplyr::mutate(
+          pct_t = base::formatC((soma_t / val_total) * 100, format = "f", digits = 1, decimal.mark = ".")
+        )
       
+      # Quantidade, Soma e % de cada Item de Consumo
       resumo_por_item <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo) %>%
         dplyr::summarise(
@@ -447,10 +489,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           pct_i = base::formatC((soma_i / val_total) * 100, format = "f", digits = 1, decimal.mark = ".")
         )
       
-      ordem_tipo <- df_forma %>%
-        dplyr::group_by(grupo_2) %>%
-        dplyr::summarise(soma_t = base::sum(valor, na.rm = TRUE), .groups = "drop")
-      
       itens_f <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
@@ -458,16 +496,24 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           qtd_desc = dplyr::n(),
           .groups  = "drop"
         ) %>%
-        dplyr::left_join(qtd_por_tipo, by = "grupo_2") %>%
+        dplyr::left_join(resumo_por_tipo, by = "grupo_2") %>%
         dplyr::left_join(resumo_por_item, by = base::c("grupo_2", "item_consumo")) %>%
-        dplyr::left_join(ordem_tipo, by = "grupo_2") %>%
         dplyr::arrange(dplyr::desc(soma_t), grupo_2, dplyr::desc(soma_i), item_consumo, dplyr::desc(val_desc)) %>%
+        dplyr::rowwise() %>%
         dplyr::mutate(
           pct_desc = base::formatC((val_desc / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
-          tipo_lbl = base::paste0("<b>", grupo_2, "</b> <span class='badge-n'>(", qtd_lanc_tipo, ")</span>"),
-          item_lbl = base::ifelse(qtd_lanc_item > 1, base::paste0(item_consumo, " <span class='badge-n'>(", qtd_lanc_item, ")</span>"), item_consumo),
-          desc_lbl = base::ifelse(qtd_desc > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_desc, ")</span>"), descricao)
-        )
+          # Tipo de Despesa: Nome (n) + R$ Valor Total · %
+          tipo_lbl = montar_bloco_categoria(grupo_2, n = qtd_lanc_tipo, valor_total = soma_t, pct_total = pct_t, negrito_nome = TRUE),
+          # Item de Consumo: Nome (n) + R$ Valor Total · %
+          item_lbl = montar_bloco_categoria(item_consumo, n = qtd_lanc_item, valor_total = soma_i, pct_total = pct_i, negrito_nome = TRUE),
+          # Descrição: Nome (e (n) se repetir), pois o valor e % já estão nas duas colunas ao lado!
+          desc_lbl = if (qtd_desc > 1) {
+            base::paste0(descricao, " <span class='cat-badge-n'>(", qtd_desc, ")</span>")
+          } else {
+            descricao
+          }
+        ) %>%
+        dplyr::ungroup()
       
       linhas_por_tipo <- itens_f %>%
         dplyr::count(grupo_2, name = "n_rows_tipo")
@@ -485,7 +531,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         dplyr::ungroup()
       
       k_rows <- base::nrow(itens_f)
-      html_col_forma <- htmltools::htmlEscape(base::paste0("<b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span>"), attribute = TRUE)
+      
+      # Forma de Pagamento: Nome (n) + R$ Valor Total · %
+      bloco_forma_html <- montar_bloco_categoria(f_atual, n = n_f, valor_total = tot_f_num, pct_total = pct_f_txt, negrito_nome = TRUE)
+      html_col_forma   <- htmltools::htmlEscape(bloco_forma_html, attribute = TRUE)
       
       for (j in base::seq_len(k_rows)) {
         html_col_tipo <- htmltools::htmlEscape(itens_f$tipo_lbl[j], attribute = TRUE)
@@ -493,8 +542,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         html_col_desc <- htmltools::htmlEscape(itens_f$desc_lbl[j], attribute = TRUE)
         html_col_val  <- htmltools::htmlEscape(formatar_celula_moeda(itens_f$val_desc[j], FALSE), attribute = TRUE)
         html_col_vpct <- htmltools::htmlEscape(base::paste0(itens_f$pct_desc[j], "%"), attribute = TRUE)
-        html_col_tot  <- htmltools::htmlEscape(formatar_celula_moeda(itens_f$soma_i[j], TRUE), attribute = TRUE)
-        html_col_tpct <- htmltools::htmlEscape(base::paste0("<b>", itens_f$pct_i[j], "%</b>"), attribute = TRUE)
         
         atributos_tr <- base::paste0(
           " class='linha-dados-sort'",
@@ -511,13 +558,11 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           " data-h-item='", html_col_item, "'",
           " data-h-desc='", html_col_desc, "'",
           " data-h-val='", html_col_val, "'",
-          " data-h-vpct='", html_col_vpct, "'",
-          " data-h-tot='", html_col_tot, "'",
-          " data-h-tpct='", html_col_tpct, "'"
+          " data-h-vpct='", html_col_vpct, "'"
         )
         
         cel_forma <- if (j == 1) {
-          base::paste0("<td rowspan='", k_rows, "' class='cel-primeira-col'><b>", f_atual, "</b> <span class='badge-n'>(", n_f, ")</span></td>")
+          base::paste0("<td rowspan='", k_rows, "' class='cel-primeira-col'>", bloco_forma_html, "</td>")
         } else ""
         
         cel_tipo <- if (itens_f$prim_tipo[j]) {
@@ -528,13 +573,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           base::paste0("<td rowspan='", itens_f$n_rows_item[j], "'>", itens_f$item_lbl[j], "</td>")
         } else ""
         
-        cel_tot_item <- if (itens_f$prim_item[j]) {
-          base::paste0(
-            "<td rowspan='", itens_f$n_rows_item[j], "'>", formatar_celula_moeda(itens_f$soma_i[j], TRUE), "</td>",
-            "<td rowspan='", itens_f$n_rows_item[j], "'><b>", itens_f$pct_i[j], "%</b></td>"
-          )
-        } else ""
-        
         linhas_html <- base::c(linhas_html, base::paste0(
           "<tr", atributos_tr, ">",
           cel_forma,
@@ -543,7 +581,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           "<td>", itens_f$desc_lbl[j], "</td>",
           "<td>", formatar_celula_moeda(itens_f$val_desc[j], FALSE), "</td>",
           "<td>", itens_f$pct_desc[j], "%</td>",
-          cel_tot_item,
           "</tr>"
         ))
       }
@@ -551,12 +588,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
     
     linha_total <- base::paste0(
       "<tr class='linha-total-dt'>",
-      "<td class='cel-primeira-col'><b>Total (", n_lanc, ")</b></td>",
+      "<td class='cel-primeira-col'><b>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
       "<td>—</td>",
       "<td>—</td>",
       "<td>—</td>",
-      "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
-      "<td><b>100.0%</b></td>",
       "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
       "<td><b>100.0%</b></td>",
       "</tr>"
@@ -571,9 +606,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<th class='th-sort-alf' data-col='item' title='Clique para ordenar por Item de Consumo'><i class='bi bi-cart3'></i> Item de Consumo</th>",
       "<th class='th-sort-alf' data-col='desc' title='Clique para ordenar por Descrição'><i class='bi bi-file-earmark-text'></i> Descrição</th>",
       "<th class='th-sort-alf' data-col='val' title='Clique para ordenar por Valor'><i class='bi bi-cash-stack'></i> Valor</th>",
-      "<th class='th-sort-alf' data-col='val' title='Clique para ordenar por %'>%</th>",
-      "<th class='th-sort-alf' data-col='tot' title='Clique para ordenar por Total do Item'><i class='bi bi-calculator'></i> Total</th>",
-      "<th class='th-sort-alf' data-col='tot' title='Clique para ordenar por % do Item'>%</th>",
+      "<th class='th-sort-alf th-icone-pct' data-col='val' title='Clique para ordenar por Percentual'><i class='bi bi-percent'></i></th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
@@ -653,8 +686,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     
     box_res_e_y[i]     <- base::sum(sub_e$valor, na.rm = TRUE)
     box_res_s_y[i]     <- base::sum(sub_s$valor, na.rm = TRUE)
-    box_card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas", incluir_quartis = TRUE)
-    box_card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas",   incluir_quartis = TRUE)
+    box_card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas")
+    box_card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas")
     
     if (base::nrow(sub_e) > 0) {
       vals_e    <- sub_e$valor
@@ -738,8 +771,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       y_s[i]         <- base::sum(sub_s$valor, na.rm = TRUE)
       hov_e[i]       <- montar_hover_inteligente(sub_e, m_lbl, "Entradas")
       hov_s[i]       <- montar_hover_inteligente(sub_s, m_lbl, "Saídas")
-      card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas", incluir_quartis = FALSE)
-      card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas",   incluir_quartis = FALSE)
+      card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas")
+      card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas")
     }
     
   } else {
@@ -759,8 +792,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       y_s          <- base::c(0)
       hov_e        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Entradas"))
       hov_s        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Saídas"))
-      card_e_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas", FALSE))
-      card_s_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas",   FALSE))
+      card_e_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas"))
+      card_s_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas"))
     } else {
       n_pts        <- base::length(dias_ativos)
       eixo_x_vec   <- base::paste0("<b>", base::format(dias_ativos, "%d"), "</b>")
@@ -783,8 +816,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
         y_s[i]         <- base::sum(sub_s$valor, na.rm = TRUE)
         hov_e[i]       <- montar_hover_inteligente(sub_e, lbl_dia, "Entradas")
         hov_s[i]       <- montar_hover_inteligente(sub_s, lbl_dia, "Saídas")
-        card_e_html[i] <- montar_card_tabela_unificada(sub_e, lbl_dia, "Entradas", incluir_quartis = FALSE)
-        card_s_html[i] <- montar_card_tabela_unificada(sub_s, lbl_dia, "Saídas",   incluir_quartis = FALSE)
+        card_e_html[i] <- montar_card_tabela_unificada(sub_e, lbl_dia, "Entradas")
+        card_s_html[i] <- montar_card_tabela_unificada(sub_s, lbl_dia, "Saídas")
       }
     }
   }
@@ -803,10 +836,11 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   tot_s <- base::sum(y_s, na.rm = TRUE)
   dif   <- tot_e - tot_s
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
+  cor_d <- base::ifelse(dif >= 0, "#15803d", "#b91c1c")
   
-  nome_e   <- base::paste0("<b>Entradas: R$ ", formatar_brl(tot_e), "</b>")
-  nome_s   <- base::paste0("<b>Saídas: R$ ", formatar_brl(tot_s), "</b>")
-  nome_dif <- base::paste0("<b>Diferença: ", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
+  nome_e   <- base::paste0("<span class='kpi-min-rot'>Entradas:</span> <b class='kpi-min-val'>R$ ", formatar_brl(tot_e), "</b>")
+  nome_s   <- base::paste0("<span class='kpi-min-rot'>Saídas:</span> <b class='kpi-min-val'>R$ ", formatar_brl(tot_s), "</b>")
+  nome_dif <- base::paste0("<span class='kpi-min-rot'>Diferença:</span> <b class='kpi-min-val' style='color:", cor_d, ";'>", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
   
   base::list(
     x            = base::as.character(eixo_x_vec),
@@ -851,7 +885,7 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     e_nome       = nome_e,
     s_nome       = nome_s,
     dif_nome     = nome_dif,
-    dif_cor      = base::ifelse(dif >= 0, "#15803d", "#b91c1c"),
+    dif_cor      = cor_d,
     max_bar      = base::as.numeric(max_bar)[1],
     max_line     = base::as.numeric(max_line)[1],
     max_box      = base::as.numeric(max_box)[1]
@@ -876,7 +910,7 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM ORDENAÇÃO HIERÁRQUICA DE TABELAS)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM ORDENAÇÃO HIERÁRQUICA ENXUTA)
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
@@ -955,9 +989,7 @@ function(el, x) {
             hItem: tr.getAttribute('data-h-item') || '',
             hDesc: tr.getAttribute('data-h-desc') || '',
             hVal:  tr.getAttribute('data-h-val') || '',
-            hVpct: tr.getAttribute('data-h-vpct') || '',
-            hTot:  tr.getAttribute('data-h-tot') || '',
-            hTpct: tr.getAttribute('data-h-tpct') || ''
+            hVpct: tr.getAttribute('data-h-vpct') || ''
           };
         });
 
@@ -968,9 +1000,6 @@ function(el, x) {
         if (tipoTab === 'entradas') {
           linhas.sort(function(a, b) {
             if (col === 'g1') {
-              const c = cmpTexto(a.g1, b.g1) * mult;
-              return c !== 0 ? c : (b.val - a.val);
-            } else if (col === 'tot') {
               const c = (a.tot - b.tot) * mult;
               if (c !== 0) return c;
               const cg = cmpTexto(a.g1, b.g1);
@@ -980,13 +1009,11 @@ function(el, x) {
               if (cg !== 0) return cg;
               return cmpTexto(a.desc, b.desc) * mult;
             } else {
-              // Ordena por Valor mantendo as fontes agrupadas e ordenando também as fontes pelo valor
               if (a.g1 !== b.g1) return (a.tot - b.tot) * mult;
               return (a.val - b.val) * mult;
             }
           });
 
-          // Reconstrói o HTML de Entradas recalculando o rowspan de cada Fonte de Renda
           const contG1 = {};
           linhas.forEach(function(r) { contG1[r.g1] = (contG1[r.g1] || 0) + 1; });
 
@@ -1003,45 +1030,37 @@ function(el, x) {
               ' data-h-g1=\"' + r.hG1.replace(/\"/g, '&quot;') + '\"' +
               ' data-h-desc=\"' + r.hDesc.replace(/\"/g, '&quot;') + '\"' +
               ' data-h-val=\"' + r.hVal.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-vpct=\"' + r.hVpct.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-tot=\"' + r.hTot.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-tpct=\"' + r.hTpct.replace(/\"/g, '&quot;') + '\">' +
+              ' data-h-vpct=\"' + r.hVpct.replace(/\"/g, '&quot;') + '\">' +
               (primG1 ? '<td rowspan=\"' + spanG1 + '\" class=\"cel-primeira-col\">' + r.hG1 + '</td>' : '') +
               '<td>' + r.hDesc + '</td>' +
               '<td>' + r.hVal + '</td>' +
               '<td>' + r.hVpct + '</td>' +
-              (primG1 ? '<td rowspan=\"' + spanG1 + '\">' + r.hTot + '</td>' : '') +
-              (primG1 ? '<td rowspan=\"' + spanG1 + '\">' + r.hTpct + '</td>' : '') +
               '</tr>';
           });
 
           tbody.innerHTML = htmlNovo + (trTotal ? trTotal.outerHTML : '');
 
         } else {
-          // SAÍDAS: Ordena respeitando a hierarquia Forma -> Tipo -> Item -> Descrição
           linhas.sort(function(a, b) {
             if (col === 'g1') {
-              const c1 = cmpTexto(a.g1, b.g1) * mult;
+              const c1 = (a.g1Tot - b.g1Tot) * mult;
               if (c1 !== 0) return c1;
             } else {
               if (a.g1 !== b.g1) return b.g1Tot - a.g1Tot;
             }
 
             if (col === 'g2') {
-              const c2 = cmpTexto(a.g2, b.g2) * mult;
+              const c2 = (a.g2Tot - b.g2Tot) * mult;
               if (c2 !== 0) return c2;
             } else {
               if (a.g2 !== b.g2) return b.g2Tot - a.g2Tot;
             }
 
             if (col === 'item') {
-              const ci = cmpTexto(a.item, b.item) * mult;
+              const ci = (a.tot - b.tot) * mult;
               if (ci !== 0) return ci;
-            } else if (col === 'tot') {
-              const ct = (a.tot - b.tot) * mult;
-              if (ct !== 0) return ct;
-              const ci = cmpTexto(a.item, b.item);
-              if (ci !== 0) return ci;
+              const cn = cmpTexto(a.item, b.item);
+              if (cn !== 0) return cn;
             } else {
               if (a.item !== b.item) return (a.tot - b.tot) * (col === 'val' ? mult : -1);
             }
@@ -1052,7 +1071,6 @@ function(el, x) {
             return (a.val - b.val) * mult;
           });
 
-          // Reconstrói o HTML de Saídas recalculando os rowspans de Forma, Tipo e Item
           const contG1 = {};
           const contG2 = {};
           const contIt = {};
@@ -1094,17 +1112,13 @@ function(el, x) {
               ' data-h-item=\"' + r.hItem.replace(/\"/g, '&quot;') + '\"' +
               ' data-h-desc=\"' + r.hDesc.replace(/\"/g, '&quot;') + '\"' +
               ' data-h-val=\"' + r.hVal.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-vpct=\"' + r.hVpct.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-tot=\"' + r.hTot.replace(/\"/g, '&quot;') + '\"' +
-              ' data-h-tpct=\"' + r.hTpct.replace(/\"/g, '&quot;') + '\">' +
+              ' data-h-vpct=\"' + r.hVpct.replace(/\"/g, '&quot;') + '\">' +
               (primG1 ? '<td rowspan=\"' + contG1[k1] + '\" class=\"cel-primeira-col\">' + r.hG1 + '</td>' : '') +
               (primG2 ? '<td rowspan=\"' + contG2[k2] + '\">' + r.hG2 + '</td>' : '') +
               (primIt ? '<td rowspan=\"' + contIt[k3] + '\">' + r.hItem + '</td>' : '') +
               '<td>' + r.hDesc + '</td>' +
               '<td>' + r.hVal + '</td>' +
               '<td>' + r.hVpct + '</td>' +
-              (primIt ? '<td rowspan=\"' + contIt[k3] + '\">' + r.hTot + '</td>' : '') +
-              (primIt ? '<td rowspan=\"' + contIt[k3] + '\">' + r.hTpct + '</td>' : '') +
               '</tr>';
           });
 
@@ -1147,7 +1161,6 @@ function(el, x) {
       '<div class=\"corpo-card-mobile-alf\">' + htmlAtivo + '</div>';
     cardDetalhes.style.display = 'block';
 
-    // Ativa o clique de ordenação nos cabeçalhos da tabela recém-aberta!
     ativarOrdenacaoTabela(cardDetalhes);
 
     cardDetalhes.querySelectorAll('.aba-mob-alf').forEach(function(btnAba) {
@@ -1181,9 +1194,9 @@ function(el, x) {
       const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
       const rotX  = String(cats[indiceClicado] || '').replace(/<[^>]*>/g, '');
 
-      if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
-      if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
-      if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+      if (legSaidas)    legSaidas.innerHTML    = '<span class=\"kpi-min-rot\">Saídas (' + rotX + '):</span> <b class=\"kpi-min-val\">R$ ' + formatarMoedaJS(valS) + '</b>';
+      if (legEntradas)  legEntradas.innerHTML  = '<span class=\"kpi-min-rot\">Entradas (' + rotX + '):</span> <b class=\"kpi-min-val\">R$ ' + formatarMoedaJS(valE) + '</b>';
+      if (legDiferenca) legDiferenca.innerHTML = '<span class=\"kpi-min-rot\">Diferença (' + rotX + '):</span> <b class=\"kpi-min-val\" style=\"color:' + corD + ';\">' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
       if (quadDiferenca) quadDiferenca.style.background = corD;
     } else {
       const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
@@ -1718,7 +1731,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (KPIS MINIMALISTAS + ORDENAÇÃO CLICÁVEL)
+# 8. ESTILO CSS E ESTRUTURA HTML (CÉLULAS MESCLADAS COM VALOR + % E TABELA ENXUTA)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1766,7 +1779,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     line-height: 1.25;
   }
 
-  /* 2. Caixa Única de Controles + KPIs Minimalistas na Linha Inferior */
+  /* 2. Caixa Única de Controles + KPIs Minimalistas Elegantes na Linha Inferior */
   .barra-controles-alf {
     display: flex;
     flex-direction: column;
@@ -1791,32 +1804,50 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     padding-top: 10px;
-    border-top: 1px solid #eaeaea;
+    border-top: 1px solid #ebebeb;
   }
 
-  /* KPIs Minimalistas e Limpos (sem caixotes pesados ao redor) */
+  /* KPIs Minimalistas Elegantes */
   .legenda-custom-alf {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 20px;
+    gap: 10px;
     margin: 0;
     padding: 0;
   }
   .item-legenda-alf {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    font-size: ", tamanho_legenda, "px;
-    color: #000000;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #111111;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: all 0.15s ease;
+  }
+  .item-legenda-alf:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+  }
+  .kpi-min-rot {
+    color: #555555;
+    font-weight: 500;
+  }
+  .kpi-min-val {
+    color: #0f172a;
+    font-weight: 700;
   }
   .quadrado-legenda-alf {
-    width: 13px;
-    height: 13px;
-    border-radius: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
     display: inline-block;
     flex-shrink: 0;
   }
@@ -1827,11 +1858,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     align-items: center;
     gap: 14px;
     background: #ffffff;
-    border: 1px solid #e4e4e7;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     font-size: 11.5px;
     color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   }
   .item-leg-box-alf {
     display: inline-flex;
@@ -1961,19 +1993,19 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     ÁREA INFERIOR DAS TABELAS (SEM SOMBRA/CAIXA EXTERNA DUPLICADA)
+     ÁREA INFERIOR DAS TABELAS (LIMPA E SEM CAIXA EXTERNA)
      ========================================================= */
   .card-hover-mobile-alf {
     display: none;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 10px;
-    padding: 4px 0;
+    margin-top: 8px;
+    padding: 2px 0;
     background: transparent;
     border: none;
     box-shadow: none;
     font-size: 12px;
-    line-height: 1.45;
+    line-height: 1.4;
     color: #000000;
     text-align: left;
   }
@@ -1981,8 +2013,8 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
-    padding-bottom: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
   }
   .abas-card-mobile-alf {
     display: inline-flex;
@@ -1993,7 +2025,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-family: inherit;
     font-size: 12px;
     font-weight: 600;
-    padding: 6px 14px;
+    padding: 5px 13px;
     border-radius: 6px;
     border: 1px solid #d0d0d0;
     background: #ffffff;
@@ -2025,29 +2057,33 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     TABELA DE RESUMO ESTATÍSTICO COMPACTA
+     TABELA DE RESUMO ESTATÍSTICO SUPER COMPACTA
      ========================================================= */
   .secao-resumo-estatistico {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   table.tabela-metricas-compacta {
     width: auto !important;
-    min-width: 420px;
     max-width: 100%;
     margin: 0 !important;
-    font-size: 11.5px !important;
+    font-size: 11px !important;
   }
   table.tabela-metricas-compacta thead th {
+    font-size: 11px !important;
+    padding: 2px 10px 7px 10px !important;
+  }
+  table.tabela-metricas-compacta thead th i {
     font-size: 11.5px !important;
-    padding: 4px 14px 10px 14px !important;
+    margin-right: 3px !important;
   }
   table.tabela-metricas-compacta tbody tr td {
-    padding: 6px 14px !important;
+    padding: 4px 10px !important;
+    font-size: 11px !important;
     white-space: nowrap !important;
   }
 
   /* =========================================================
-     TABELA PRINCIPAL IDÊNTICA À SUA TABELA DT (COM ORDENAÇÃO INVISÍVEL)
+     TABELA PRINCIPAL ENXUTA + BLOCOS EMPILHADOS (NOME / N / VALOR · %)
      ========================================================= */
   .wrapper-tabela-dt-alf {
     width: 100%;
@@ -2067,13 +2103,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-size: 12.5px !important;
     color: #111111 !important;
     position: relative !important;
-    padding: 8px 8px 16px 8px !important;
+    padding: 6px 10px 14px 10px !important;
     background: transparent !important;
     text-align: center !important;
     white-space: nowrap !important;
     user-select: none !important;
   }
-  /* Mãozinha ao passar o mouse nos cabeçalhos ordenáveis (igual à sua tabela DT!) */
   table.tabela-estilo-dt-alf thead th.th-sort-alf {
     cursor: pointer !important;
   }
@@ -2082,7 +2117,11 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     font-size: 13.5px !important;
     color: #444444 !important;
   }
-  /* A barra preta individual de 80% embaixo de cada cabeçalho */
+  table.tabela-estilo-dt-alf thead th.th-icone-pct i {
+    margin-right: 0 !important;
+    font-size: 14px !important;
+    color: #111111 !important;
+  }
   table.tabela-estilo-dt-alf thead th::after {
     content: '' !important;
     position: absolute !important;
@@ -2094,9 +2133,8 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     border-radius: 4px !important;
   }
 
-  /* Células do corpo com grade fina #e0e0e0 e fundo branco puro */
   table.tabela-estilo-dt-alf tbody tr td {
-    padding: 8px 10px !important;
+    padding: 8px 12px !important;
     border-top: none !important;
     border-bottom: 1px solid #e0e0e0 !important;
     border-right: 1px solid #e0e0e0 !important;
@@ -2106,14 +2144,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     text-align: center !important;
     vertical-align: middle !important;
   }
-  /* Apenas a 1ª coluna da esquerda leva border-left para não duplicar bordas */
   table.tabela-estilo-dt-alf tbody tr td.cel-primeira-col {
     border-left: 1px solid #e0e0e0 !important;
   }
   table.tabela-estilo-dt-alf tbody tr:hover td {
     background-color: #f9f9f9 !important;
   }
-  /* Linha final (ou linha única da tabela de resumo) com cantos arredondados de 12px embaixo */
   table.tabela-estilo-dt-alf tbody tr.linha-total-dt td {
     background-color: #fcfcfc !important;
     border-bottom: 1px solid #e0e0e0 !important;
@@ -2126,20 +2162,77 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     border-bottom-right-radius: 12px !important;
   }
 
-  /* Formatação de moeda R$ alinhada igual à coluna Valor da sua tabela DT */
+  /* Bloco empilhado elegante dentro das células mescladas:
+     Linha 1: Nome (n)
+     Linha 2: R$ Valor Total · % */
+  .bloco-empilhado-alf {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    line-height: 1.25;
+  }
+  .cat-linha-topo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .cat-nome-negrito {
+    font-weight: 700;
+    color: #111111;
+    font-size: 12px;
+  }
+  .cat-nome-normal {
+    font-weight: 600;
+    color: #222222;
+    font-size: 12px;
+  }
+  .cat-badge-n {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .cat-linha-val {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1.5px 7px;
+    white-space: nowrap;
+  }
+  .cat-val-txt {
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .cat-sep-dot {
+    color: #94a3b8;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .cat-pct-txt {
+    color: #475569;
+    font-weight: 600;
+    font-size: 10.5px;
+  }
+
+  /* Formatação de moeda R$ alinhada na coluna única de Valor */
   .celula-moeda-alf {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    min-width: 74px;
+    min-width: 80px;
+    max-width: 115px;
+    margin: 0 auto;
     white-space: nowrap;
-  }
-  .badge-n {
-    color: #64748b;
-    font-weight: 600;
-    font-size: 11px;
   }
 
   /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot */
@@ -2192,17 +2285,18 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       padding-top: 8px;
     }
     .legenda-custom-alf {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 5px;
-    }
-    .item-legenda-alf {
-      font-size: 11.5px;
+      width: 100%;
       gap: 6px;
     }
+    .item-legenda-alf {
+      font-size: 11px;
+      padding: 5px 10px;
+      gap: 6px;
+      flex: 1 1 auto;
+    }
     .quadrado-legenda-alf {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
     }
     .legenda-boxplot-direita-alf {
       width: 100%;
@@ -2219,14 +2313,11 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       white-space: nowrap !important;
     }
     table.tabela-estilo-dt-alf thead th {
-      font-size: 11.5px !important;
-      padding: 7px 6px 14px 6px !important;
+      font-size: 11px !important;
+      padding: 5px 6px 12px 6px !important;
     }
     table.tabela-estilo-dt-alf tbody tr td {
       padding: 6px 8px !important;
-    }
-    table.tabela-metricas-compacta {
-      min-width: 100%;
     }
   }
 "))
@@ -2238,7 +2329,7 @@ opcoes_html_mes <- purrr::map(meses_disponiveis, function(m) {
 # 1. Título Principal ACIMA da linha preta
 titulo_topo_html <- htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome)
 
-# 2. Caixa Única: Filtros na linha de cima + KPIs Minimalistas na linha de baixo!
+# 2. Caixa Única: Filtros na linha de cima + KPIs Minimalistas Elegantes na linha de baixo!
 controles_e_legenda_html <- htmltools::tags$div(
   class = "barra-controles-alf",
   
@@ -2290,7 +2381,7 @@ controles_e_legenda_html <- htmltools::tags$div(
     )
   ),
   
-  # Linha Inferior Minimalista (dentro da mesma caixa): Saídas | Entradas | Diferença
+  # Linha Inferior: Cards KPI Minimalistas Elegantes (Saídas | Entradas | Diferença)
   htmltools::tags$div(
     class = "linha-legendas-inf-alf",
     htmltools::tags$div(
