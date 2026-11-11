@@ -2,12 +2,12 @@
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
 # Ajustes implementados:
-#   1. Saídas, Entradas e Diferença DENTRO da caixa de filtros (na linha inferior).
-#   2. Tabela do Card inferior com o EXATO estilo da tabela DT (ícones Bootstrap,
-#      barra preta ::after de 80% sob cada coluna, grade #e0e0e0 e cantos 12px).
-#   3. Sem agrupamento "+X ver": todas as descrições aparecem em linhas próprias,
-#      com Forma de Pagamento, Tipo de Despesa, Item de Consumo, Total e (%)
-#      mesclados verticalmente (rowspan).
+#   1. KPIs bonitos e integrados DENTRO da barra de controles (linha inferior).
+#   2. Resumo Estatístico transformado em TABELA com o mesmo estilo da tabela DT
+#      (barra preta 80% sob cada métrica, bordas #e0e0e0 e cantos 12px).
+#   3. Removido o texto "DETALHAMENTO DOS LANÇAMENTOS" e removidos os ícones
+#      finais que duplicavam "% (%)", deixando os cabeçalhos limpos e elegantes.
+#   4. Fonte da tabela reduzida para caber 100% sem cortar a última coluna.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -161,7 +161,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER E TABELA NO ESTILO DA TABELA DT (BARRA PRETA + GRADE)
+# 4. FUNÇÕES DE HOVER E TABELAS NO ESTILO DA TABELA DT (BARRA PRETA + GRADE)
 # ==============================================================================
 
 # 4.1 Hover flutuante (PC) para Barras e Linhas
@@ -235,37 +235,62 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# 4.2 Seção "Resumo Estatístico" (posicionada ACIMA da tabela no Card)
-montar_barra_metricas <- function(vals, extra_quartis = NULL) {
+# 4.2 Resumo Estatístico formatado como TABELA idêntica à nossa (barra preta 80% + grade #e0e0e0)
+montar_tabela_metricas <- function(vals, extra_quartis = NULL) {
   val_media <- base::mean(vals, na.rm = TRUE)
   val_max   <- base::max(vals, na.rm = TRUE)
   val_min   <- base::min(vals, na.rm = TRUE)
   val_amp   <- val_max - val_min
   
-  bloco_q <- ""
   if (!base::is.null(extra_quartis)) {
-    bloco_q <- base::paste0(
-      "<div class='pilula-metrica-card'><span>Mediana (Q2):</span> <b>R$ ", formatar_brl(extra_quartis$med), "</b></div>",
-      "<div class='pilula-metrica-card'><span>Q1 / Q3:</span> <b>R$ ", formatar_brl(extra_quartis$q1), " / R$ ", formatar_brl(extra_quartis$q3), "</b></div>",
-      "<div class='pilula-metrica-card'><span>IIQ:</span> <b>R$ ", formatar_brl(extra_quartis$iiq), "</b></div>"
+    cab_cols <- base::paste0(
+      "<th>Mediana (Q2)</th>",
+      "<th>Q1 (25%)</th>",
+      "<th>Q3 (75%)</th>",
+      "<th>IIQ</th>",
+      "<th>Média</th>",
+      "<th>Máx</th>",
+      "<th>Mín</th>",
+      "<th>Amplitude</th>"
+    )
+    val_cols <- base::paste0(
+      "<td class='cel-primeira-col'>", formatar_celula_moeda(extra_quartis$med, TRUE), "</td>",
+      "<td>", formatar_celula_moeda(extra_quartis$q1, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(extra_quartis$q3, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(extra_quartis$iiq, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(val_media, TRUE), "</td>",
+      "<td>", formatar_celula_moeda(val_max, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(val_min, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(val_amp, FALSE), "</td>"
+    )
+  } else {
+    cab_cols <- base::paste0(
+      "<th>Média</th>",
+      "<th>Máx</th>",
+      "<th>Mín</th>",
+      "<th>Amplitude</th>"
+    )
+    val_cols <- base::paste0(
+      "<td class='cel-primeira-col'>", formatar_celula_moeda(val_media, TRUE), "</td>",
+      "<td>", formatar_celula_moeda(val_max, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(val_min, FALSE), "</td>",
+      "<td>", formatar_celula_moeda(val_amp, FALSE), "</td>"
     )
   }
   
   base::paste0(
     "<div class='secao-resumo-estatistico'>",
-    "<div class='subtitulo-card-alf'>Resumo Estatístico</div>",
-    "<div class='barra-metricas-card'>",
-    bloco_q,
-    "<div class='pilula-metrica-card'><span>Média:</span> <b>R$ ", formatar_brl(val_media), "</b></div>",
-    "<div class='pilula-metrica-card'><span>Máx:</span> <b>R$ ", formatar_brl(val_max), "</b></div>",
-    "<div class='pilula-metrica-card'><span>Mín:</span> <b>R$ ", formatar_brl(val_min), "</b></div>",
-    "<div class='pilula-metrica-card'><span>Amplitude:</span> <b>R$ ", formatar_brl(val_amp), "</b></div>",
+    "<div class='wrapper-tabela-dt-alf'>",
+    "<table class='tabela-estilo-dt-alf tabela-metricas-topo'>",
+    "<thead><tr>", cab_cols, "</tr></thead>",
+    "<tbody><tr class='linha-total-dt'>", val_cols, "</tr></tbody>",
+    "</table>",
     "</div>",
     "</div>"
   )
 }
 
-# 4.3 Tabela no estilo idêntico ao da foto (Ícones Bootstrap + Barra Preta 80% + Todas as linhas visíveis e mescladas)
+# 4.3 Tabela Principal (Sem subtítulo "DETALHAMENTO DOS LANÇAMENTOS", sem ícones feios no final e fonte menor)
 montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, incluir_quartis = FALSE) {
   n_lanc <- base::nrow(df_sub)
   
@@ -276,7 +301,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
   val_total     <- base::sum(df_sub$valor, na.rm = TRUE)
   vals          <- df_sub$valor
   quartis_lista <- if (incluir_quartis) calcular_quartis_plotly(vals) else NULL
-  bloco_resumo  <- montar_barra_metricas(vals, extra_quartis = quartis_lista)
+  bloco_resumo  <- montar_tabela_metricas(vals, extra_quartis = quartis_lista)
   
   if (tipo_sel == "Entradas") {
     # ENTRADAS: Fonte de Renda | Descrição | Valor | (%) | Total | (%)
@@ -355,20 +380,19 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<div class='wrapper-tabela-dt-alf'>",
       "<table class='tabela-estilo-dt-alf'>",
       "<thead><tr>",
-      "<th><i class='bi bi-briefcase'></i> Fonte de Renda</th>",
-      "<th><i class='bi bi-file-earmark-text'></i> Descrição</th>",
-      "<th><i class='bi bi-cash-stack'></i> Valor</th>",
-      "<th><i class='bi bi-percent'></i> (%)</th>",
-      "<th><i class='bi bi-calculator'></i> Total</th>",
-      "<th><i class='bi bi-pie-chart'></i> (%)</th>",
+      "<th>Fonte de Renda</th>",
+      "<th>Descrição</th>",
+      "<th>Valor</th>",
+      "<th>(%)</th>",
+      "<th>Total</th>",
+      "<th>(%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
     )
     
   } else {
-    # SAÍDAS SEM AGRUPAMENTO OCULTO: Todas as descrições aparecem separadas em linhas próprias!
-    # Forma de Pagamento, Tipo de Despesa, Item de Consumo, Total e (%) ficam mesclados (rowspan).
+    # SAÍDAS: Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | (%) | Total | (%)
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -391,14 +415,12 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       
       df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
       
-      # Contagem de lançamentos por Tipo de Despesa e por Item de Consumo
       qtd_por_tipo <- df_forma %>%
         dplyr::count(grupo_2, name = "qtd_lanc_tipo")
       
       qtd_por_item <- df_forma %>%
         dplyr::count(grupo_2, item_consumo, name = "qtd_lanc_item")
       
-      # Totais para ordenar Tipo de Despesa e Item de Consumo do maior para o menor valor
       ordem_tipo <- df_forma %>%
         dplyr::group_by(grupo_2) %>%
         dplyr::summarise(soma_t = base::sum(valor, na.rm = TRUE), .groups = "drop")
@@ -407,7 +429,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
         dplyr::group_by(grupo_2, item_consumo) %>%
         dplyr::summarise(soma_i = base::sum(valor, na.rm = TRUE), .groups = "drop")
       
-      # Todas as descrições em linhas separadas (sem esconder nada em "+X ver")
       itens_f <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo, descricao) %>%
         dplyr::summarise(
@@ -427,7 +448,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
           desc_lbl = base::ifelse(qtd_desc > 1, base::paste0(descricao, " <span class='badge-n'>(", qtd_desc, ")</span>"), descricao)
         )
       
-      # Quantidade exata de linhas que cada Tipo de Despesa e cada Item de Consumo vão mesclar (rowspan)
       linhas_por_tipo <- itens_f %>%
         dplyr::count(grupo_2, name = "n_rows_tipo")
       
@@ -496,23 +516,23 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, inclu
       "<div class='wrapper-tabela-dt-alf'>",
       "<table class='tabela-estilo-dt-alf'>",
       "<thead><tr>",
-      "<th><i class='bi bi-credit-card'></i> Forma de Pagamento</th>",
-      "<th><i class='bi bi-tags'></i> Tipo de Despesa</th>",
-      "<th><i class='bi bi-cart3'></i> Item de Consumo</th>",
-      "<th><i class='bi bi-file-earmark-text'></i> Descrição</th>",
-      "<th><i class='bi bi-cash-stack'></i> Valor</th>",
-      "<th><i class='bi bi-percent'></i> (%)</th>",
-      "<th><i class='bi bi-calculator'></i> Total</th>",
-      "<th><i class='bi bi-pie-chart'></i> (%)</th>",
+      "<th>Forma de Pagamento</th>",
+      "<th>Tipo de Despesa</th>",
+      "<th>Item de Consumo</th>",
+      "<th>Descrição</th>",
+      "<th>Valor</th>",
+      "<th>(%)</th>",
+      "<th>Total</th>",
+      "<th>(%)</th>",
       "</tr></thead>",
       "<tbody>", base::paste(linhas_html, collapse = ""), linha_total, "</tbody>",
       "</table></div>"
     )
   }
   
+  # Sem o texto "DETALHAMENTO DOS LANÇAMENTOS": entra a Tabela de Resumo Estatístico e logo abaixo a Tabela Principal
   base::paste0(
     bloco_resumo,
-    "<div class='subtitulo-card-alf'>Detalhamento dos Lançamentos</div>",
     tabela_final
   )
 }
@@ -735,9 +755,9 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   dif   <- tot_e - tot_s
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
   
-  nome_e   <- base::paste0("<b>Entradas: R$ ", formatar_brl(tot_e), "</b>")
-  nome_s   <- base::paste0("<b>Saídas: R$ ", formatar_brl(tot_s), "</b>")
-  nome_dif <- base::paste0("<b>Diferença: ", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
+  nome_e   <- base::paste0("<span class='rot-kpi-inline'>Entradas:</span> <b class='val-kpi-inline'>R$ ", formatar_brl(tot_e), "</b>")
+  nome_s   <- base::paste0("<span class='rot-kpi-inline'>Saídas:</span> <b class='val-kpi-inline'>R$ ", formatar_brl(tot_s), "</b>")
+  nome_dif <- base::paste0("<span class='rot-kpi-inline'>Diferença:</span> <b class='val-kpi-inline'>", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
   
   base::list(
     x            = base::as.character(eixo_x_vec),
@@ -831,6 +851,7 @@ function(el, x) {
   const legSaidas     = painel.querySelector('.leg-texto-saidas');
   const legDiferenca  = painel.querySelector('.leg-texto-diferenca');
   const quadDiferenca = painel.querySelector('.quadrado-diferenca');
+  const cardKpiDif    = painel.querySelector('.kpi-embutido-dif');
   const legBoxplotDir = painel.querySelector('.legenda-boxplot-direita-alf');
   const cardDetalhes  = painel.querySelector('.card-hover-mobile-alf');
 
@@ -910,10 +931,11 @@ function(el, x) {
       const corD  = dif >= 0 ? '#15803d' : '#b91c1c';
       const rotX  = String(cats[indiceClicado] || '').replace(/<[^>]*>/g, '');
 
-      if (legSaidas)    legSaidas.innerHTML    = '<b>Saídas (' + rotX + '): R$ ' + formatarMoedaJS(valS) + '</b>';
-      if (legEntradas)  legEntradas.innerHTML  = '<b>Entradas (' + rotX + '): R$ ' + formatarMoedaJS(valE) + '</b>';
-      if (legDiferenca) legDiferenca.innerHTML = '<b>Diferença (' + rotX + '): ' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+      if (legSaidas)    legSaidas.innerHTML    = '<span class=\"rot-kpi-inline\">Saídas (' + rotX + '):</span> <b class=\"val-kpi-inline\">R$ ' + formatarMoedaJS(valS) + '</b>';
+      if (legEntradas)  legEntradas.innerHTML  = '<span class=\"rot-kpi-inline\">Entradas (' + rotX + '):</span> <b class=\"val-kpi-inline\">R$ ' + formatarMoedaJS(valE) + '</b>';
+      if (legDiferenca) legDiferenca.innerHTML = '<span class=\"rot-kpi-inline\">Diferença (' + rotX + '):</span> <b class=\"val-kpi-inline\" style=\"color:' + corD + ';\">' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
       if (quadDiferenca) quadDiferenca.style.background = corD;
+      if (cardKpiDif)    cardKpiDif.style.borderLeftColor = corD;
     } else {
       const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
       const nomeS   = Array.isArray(d.s_nome)   ? d.s_nome[0]   : d.s_nome;
@@ -924,6 +946,7 @@ function(el, x) {
       if (legSaidas)    legSaidas.innerHTML    = nomeS;
       if (legDiferenca) legDiferenca.innerHTML = nomeDif;
       if (quadDiferenca) quadDiferenca.style.background = corDif;
+      if (cardKpiDif)    cardKpiDif.style.borderLeftColor = corDif;
     }
   }
 
@@ -1447,7 +1470,7 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (LEGENDA DENTRO DOS FILTROS + TABELA ESTILO DT)
+# 8. ESTILO CSS E ESTRUTURA HTML (KPIS EMBUTIDOS + RESUMO E DETALHES COMO TABELA)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
@@ -1495,7 +1518,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     line-height: 1.25;
   }
 
-  /* 2. Caixa Única de Controles + Legenda (Saídas, Entradas e Diferença ficam dentro na linha de baixo!) */
+  /* 2. Caixa Única de Controles + KPIs Embutidos na Linha Inferior */
   .barra-controles-alf {
     display: flex;
     flex-direction: column;
@@ -1520,30 +1543,55 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     padding-top: 10px;
     border-top: 1px solid #eaeaea;
   }
+
+  /* KPIs bonitinhos e compactos DENTRO da barra de controles */
   .legenda-custom-alf {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 18px;
+    gap: 10px;
     margin: 0;
     padding: 0;
   }
   .item-legenda-alf {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    font-size: ", tamanho_legenda, "px;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #111111;
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    padding: 6px 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: all 0.15s ease;
+  }
+  .kpi-embutido-saidas {
+    border-left: 3.5px solid ", cor_saidas, ";
+  }
+  .kpi-embutido-entradas {
+    border-left: 3.5px solid ", cor_entradas, ";
+  }
+  .kpi-embutido-dif {
+    border-left: 3.5px solid ", estado_ini$dif_cor[1], ";
+  }
+  .rot-kpi-inline {
+    color: #555555;
+    font-weight: 600;
+  }
+  .val-kpi-inline {
     color: #000000;
+    font-weight: 700;
   }
   .quadrado-legenda-alf {
-    width: 13px;
-    height: 13px;
-    border-radius: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 2.5px;
     display: inline-block;
     flex-shrink: 0;
   }
@@ -1554,11 +1602,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     align-items: center;
     gap: 14px;
     background: #ffffff;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e4e4e7;
     border-radius: 8px;
-    padding: 4px 12px;
+    padding: 6px 13px;
     font-size: 11.5px;
     color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   }
   .item-leg-box-alf {
     display: inline-flex;
@@ -1688,7 +1737,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     CARD INFERIOR E TABELA COM O EXATO ESTILO DA SUA TABELA DT
+     CARD INFERIOR COM DUAS TABELAS NO ESTILO DA SUA TABELA DT
      ========================================================= */
   .card-hover-mobile-alf {
     display: none;
@@ -1700,7 +1749,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     border: 1px solid #e0e0e0;
     border-top: 2px solid #000000;
     border-radius: 0 0 12px 12px;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.45;
     color: #000000;
     text-align: left;
@@ -1721,7 +1770,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
   .aba-mob-alf {
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     padding: 6px 14px;
     border-radius: 6px;
@@ -1755,49 +1804,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     cursor: pointer;
     padding: 0 4px;
   }
-  .subtitulo-card-alf {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    margin: 0 0 8px 0;
-  }
   .secao-resumo-estatistico {
-    margin-bottom: 16px;
-  }
-  .barra-metricas-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    background: #fcfcfc;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 11.5px;
-    color: #1e293b;
-  }
-  .pilula-metrica-card {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 4px 10px;
-  }
-  .pilula-metrica-card span {
-    color: #555555;
-    font-weight: 500;
-  }
-  .pilula-metrica-card b {
-    color: #000000;
-    font-weight: 700;
+    margin-bottom: 18px;
   }
 
   /* =========================================================
-     ESTILO IDÊNTICO À SUA TABELA DT (image_4d5438.png)
+     ESTILO IDÊNTICO À SUA TABELA DT (FONTE MENOR E SEM ÍCONES POLUINDO)
      ========================================================= */
   .wrapper-tabela-dt-alf {
     width: 100%;
@@ -1805,7 +1817,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
   table.tabela-estilo-dt-alf {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
     width: 100% !important;
@@ -1814,18 +1826,13 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     border: none !important;
     text-transform: none !important;
     font-weight: 600 !important;
-    font-size: 13.5px !important;
+    font-size: 12.5px !important;
     color: #111111 !important;
     position: relative !important;
-    padding: 10px 10px 20px 10px !important;
+    padding: 8px 8px 16px 8px !important;
     background: transparent !important;
     text-align: center !important;
     white-space: nowrap !important;
-  }
-  table.tabela-estilo-dt-alf thead th i {
-    margin-right: 5px !important;
-    font-size: 14px !important;
-    color: #444444 !important;
   }
   /* A barra preta individual de 80% embaixo de cada cabeçalho (idêntica à sua DT!) */
   table.tabela-estilo-dt-alf thead th::after {
@@ -1841,7 +1848,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
 
   /* Células do corpo com grade fina #e0e0e0 e fundo branco puro */
   table.tabela-estilo-dt-alf tbody tr td {
-    padding: 11px 12px !important;
+    padding: 9px 10px !important;
     border-top: none !important;
     border-bottom: 1px solid #e0e0e0 !important;
     border-right: 1px solid #e0e0e0 !important;
@@ -1855,11 +1862,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   table.tabela-estilo-dt-alf tbody tr td.cel-primeira-col {
     border-left: 1px solid #e0e0e0 !important;
   }
-  /* Hover suave na linha */
   table.tabela-estilo-dt-alf tbody tr:hover td {
     background-color: #f9f9f9 !important;
   }
-  /* Linha final de Total com cantos arredondados de 12px embaixo */
+  /* Linha final (ou linha única da tabela de resumo) com cantos arredondados de 12px embaixo */
   table.tabela-estilo-dt-alf tbody tr.linha-total-dt td {
     background-color: #fcfcfc !important;
     border-bottom: 1px solid #e0e0e0 !important;
@@ -1877,15 +1883,15 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    min-width: 82px;
+    min-width: 74px;
     white-space: nowrap;
   }
   .badge-n {
     color: #64748b;
     font-weight: 600;
-    font-size: 11.5px;
+    font-size: 11px;
   }
 
   /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot */
@@ -1938,17 +1944,18 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       padding-top: 8px;
     }
     .legenda-custom-alf {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 5px;
-    }
-    .item-legenda-alf {
-      font-size: 11.5px;
+      width: 100%;
       gap: 6px;
     }
+    .item-legenda-alf {
+      font-size: 11px;
+      padding: 5px 10px;
+      gap: 6px;
+      flex: 1 1 auto;
+    }
     .quadrado-legenda-alf {
-      width: 11px;
-      height: 11px;
+      width: 9px;
+      height: 9px;
     }
     .legenda-boxplot-direita-alf {
       width: 100%;
@@ -1964,23 +1971,15 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
       padding: 5px 10px;
     }
     table.tabela-estilo-dt-alf {
-      font-size: 11.5px !important;
+      font-size: 11px !important;
       white-space: nowrap !important;
     }
     table.tabela-estilo-dt-alf thead th {
-      font-size: 12px !important;
-      padding: 8px 8px 16px 8px !important;
+      font-size: 11.5px !important;
+      padding: 7px 6px 14px 6px !important;
     }
     table.tabela-estilo-dt-alf tbody tr td {
-      padding: 8px 9px !important;
-    }
-    .barra-metricas-card {
-      gap: 6px;
-      padding: 6px 8px;
-    }
-    .pilula-metrica-card {
-      padding: 3px 7px;
-      font-size: 10.5px;
+      padding: 7px 8px !important;
     }
   }
 "))
@@ -1992,7 +1991,7 @@ opcoes_html_mes <- purrr::map(meses_disponiveis, function(m) {
 # 1. Título Principal ACIMA da linha preta
 titulo_topo_html <- htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome)
 
-# 2. Caixa Única: Filtros na linha de cima + Saídas, Entradas e Diferença na linha de baixo!
+# 2. Caixa Única: Filtros na linha de cima + KPIs Embutidos na linha de baixo!
 controles_e_legenda_html <- htmltools::tags$div(
   class = "barra-controles-alf",
   
@@ -2044,23 +2043,23 @@ controles_e_legenda_html <- htmltools::tags$div(
     )
   ),
   
-  # Linha Inferior (dentro da mesma caixa): Saídas | Entradas | Diferença + Legenda Boxplot
+  # Linha Inferior (dentro da mesma caixa): KPIs bonitinhos de Saídas | Entradas | Diferença
   htmltools::tags$div(
     class = "linha-legendas-inf-alf",
     htmltools::tags$div(
       class = "legenda-custom-alf",
       htmltools::tags$span(
-        class = "item-legenda-alf",
+        class = "item-legenda-alf kpi-embutido-saidas",
         htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_saidas, ";")),
         htmltools::tags$span(class = "leg-texto-saidas", htmltools::HTML(estado_ini$s_nome[1]))
       ),
       htmltools::tags$span(
-        class = "item-legenda-alf",
+        class = "item-legenda-alf kpi-embutido-entradas",
         htmltools::tags$span(class = "quadrado-legenda-alf", style = base::paste0("background:", cor_entradas, ";")),
         htmltools::tags$span(class = "leg-texto-entradas", htmltools::HTML(estado_ini$e_nome[1]))
       ),
       htmltools::tags$span(
-        class = "item-legenda-alf",
+        class = "item-legenda-alf kpi-embutido-dif",
         htmltools::tags$span(class = "quadrado-legenda-alf quadrado-diferenca", style = base::paste0("background:", estado_ini$dif_cor[1], ";")),
         htmltools::tags$span(class = "leg-texto-diferenca", htmltools::HTML(estado_ini$dif_nome[1]))
       )
