@@ -20,16 +20,16 @@ format:
     toc: true
     toc-location: right
     toc-title: "Nesta página"
-    number-sections: true
+    number-sections: false
     code-fold: true
     code-summary: "Código"
     tbl-cap-location: top
 
-    # Grade para o PC: sem espaço morto na esquerda e Sumário fixo na direita
+    # Grade nativa do Quarto: tira o espaço morto da esquerda e reserva 210px exclusivos para o Sumário na direita
     grid:
-      sidebar-width: 0px
-      body-width: 1400px
-      margin-width: 220px
+      sidebar-width: 10px
+      body-width: 1150px
+      margin-width: 210px
       gutter-width: 1.5rem
 
     include-in-header:
@@ -45,10 +45,14 @@ format:
             cursor: pointer;
           }
 
-          /* 1. DESKTOP (>= 992px): Mostra o TOC na direita e expande o painel/tabelas */
+          /* 1. DESKTOP (>= 992px): Garante que o gráfico respeite o limite antes do Sumário e nunca tenha cliques bloqueados */
           @media (min-width: 992px) {
-            #quarto-content.page-columns {
-              grid-template-columns: [screen-start] 1.5rem [screen-start-inset page-start page-start-inset body-start-outset body-start] minmax(0, 1fr) [body-end body-end-outset] 1.5rem [margin-start] 220px [margin-end page-end-inset page-end screen-end-inset] 1.5rem [screen-end] !important;
+            main.content,
+            #quarto-document-content {
+              max-width: 100% !important;
+              width: 100% !important;
+              min-width: 0 !important;
+              overflow-x: hidden !important;
             }
             .painel-fluxo-alf,
             .dataTables_wrapper {
@@ -56,10 +60,18 @@ format:
               width: 100% !important;
               margin-left: 0 !important;
               margin-right: 0 !important;
+              box-sizing: border-box !important;
+            }
+            /* Impede que a coluna invisível abaixo do Sumário bloqueie cliques nos botões da direita */
+            #quarto-margin-sidebar {
+              pointer-events: none !important;
+            }
+            #quarto-margin-sidebar * {
+              pointer-events: auto !important;
             }
           }
 
-          /* 2. MOBILE E TABLET (< 992px): Desativa 100% o TOC para não bugar a tela! */
+          /* 2. MOBILE E TABLET (< 992px): Desativa 100% o TOC para não bugar a tela no celular */
           @media (max-width: 991.98px) {
             #quarto-margin-sidebar,
             #TOC,
