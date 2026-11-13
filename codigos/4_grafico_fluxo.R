@@ -2,15 +2,12 @@
 # PROJETO ALF — Painel de Gráficos: Empilhado, Linhas e Boxplot (Versão Final)
 # ==============================================================================
 # Ajustes implementados:
-#   1. Removidas as 2 últimas colunas ("Total" e "%"), mantendo apenas UMA coluna
-#      de "Valor" e UMA de "%" no final da tabela.
-#   2. Células mescladas (Fonte de Renda, Forma de Pagamento, Tipo de Despesa e
-#      Item de Consumo) agora exibem de forma organizada:
-#        Nome (n)
-#        R$ Valor Total · %
-#   3. Resumo Estatístico completo (Média, Mediana, Q1, Q3, IIQ, Máx, Mín, Amplitude)
-#      sempre visível em todas as abas e super compacto.
-#   4. Ordenação inteligente ao clicar nos cabeçalhos preservando o rowspan.
+#   1. Indicador renomeado de "Diferença" para "Saldo".
+#   2. Largura expandida no PC (max-width: 1200px) e alinhada à esquerda (margin-left: 0)
+#      para conviver perfeitamente com o Sumário (TOC) do Quarto.
+#   3. Tabela de Resumo Estatístico exibida APENAS na visão Boxplot.
+#   4. Destaques elegantes em Azul Marinho (#03045e) nos ícones do cabeçalho,
+#      nos títulos das categorias mescladas, nos subtotais e na linha Total.
 
 # ==============================================================================
 # 1. CONFIGURAÇÕES VISUAIS (PADRÃO ALEX + PALETA AZUL/CIANO)
@@ -46,7 +43,7 @@ hover_fonte_tam   <- 12
 borda_balao_hover <- "#000000"
 
 raio_cantos           <- 8
-altura_grafico        <- 440 # Altura no Notebook/PC
+altura_grafico        <- 450 # Altura no Notebook/PC
 altura_grafico_mobile <- 295 # Altura compacta no Celular
 
 incluir_a_pagar <- TRUE
@@ -75,18 +72,17 @@ formatar_brl <- function(x) {
 
 # Formata a célula de moeda igual à sua tabela DT (R$ na esquerda e número na direita)
 formatar_celula_moeda <- function(x, negrito = FALSE) {
-  peso <- if (negrito) "font-weight: 700;" else ""
+  cls_extra <- if (negrito) " celula-moeda-destaque" else ""
   base::paste0(
-    "<div class='celula-moeda-alf' style='", peso, "'>",
+    "<div class='celula-moeda-alf", cls_extra, "'>",
     "<span>R$</span><span>", formatar_brl(x), "</span>",
     "</div>"
   )
 }
 
-# Bloco empilhado super organizado para as células mescladas:
-#   Linha 1: Nome
-#   Linha 2: (n)
-#   Linha 3: R$ Valor Total (ou R$ Valor · %)
+# Bloco empilhado super organizado para as células mescladas (com Azul Escuro no nome principal e valor):
+#   Linha 1: Nome (n)
+#   Linha 2: R$ Valor Total · %
 montar_bloco_categoria <- function(nome, n = NULL, valor_total = NULL, pct_total = NULL, negrito_nome = TRUE) {
   tag_nome <- if (negrito_nome) {
     base::paste0("<span class='cat-nome-negrito'>", nome, "</span>")
@@ -203,7 +199,7 @@ opcoes_usuario    <- base::c("Todos", "Alex", "Leticia")
 
 
 # ==============================================================================
-# 4. FUNÇÕES DE HOVER E TABELAS ENXUTAS (SEM AS 2 ÚLTIMAS COLUNAS REDUNDANTES)
+# 4. FUNÇÕES DE HOVER E TABELAS (RESUMO ESTATÍSTICO APENAS NO BOXPLOT)
 # ==============================================================================
 
 # 4.1 Hover flutuante (PC) para Barras e Linhas
@@ -277,7 +273,7 @@ montar_hover_inteligente <- function(df_sub, titulo_periodo, tipo_sel) {
   base::paste0(cabecalho, bloco_1, bloco_2, rodape_stats)
 }
 
-# 4.2 Resumo Estatístico Super Compacto (SEMPRE exibe Média, Mediana, Q1, Q3, IIQ, Máx, Mín e Amplitude!)
+# 4.2 Resumo Estatístico (Exibido APENAS na visão Boxplot!)
 montar_tabela_metricas <- function(vals) {
   qs        <- calcular_quartis_plotly(vals)
   val_media <- base::mean(vals, na.rm = TRUE)
@@ -297,8 +293,8 @@ montar_tabela_metricas <- function(vals) {
   )
   
   val_cols <- base::paste0(
-    "<td class='cel-primeira-col'><b>R$ ", formatar_brl(val_media), "</b></td>",
-    "<td><b>R$ ", formatar_brl(qs$med), "</b></td>",
+    "<td class='cel-primeira-col'><b class='txt-azul-escuro'>R$ ", formatar_brl(val_media), "</b></td>",
+    "<td><b class='txt-azul-escuro'>R$ ", formatar_brl(qs$med), "</b></td>",
     "<td>R$ ", formatar_brl(qs$q1), "</td>",
     "<td>R$ ", formatar_brl(qs$q3), "</td>",
     "<td>R$ ", formatar_brl(qs$iiq), "</td>",
@@ -319,11 +315,8 @@ montar_tabela_metricas <- function(vals) {
   )
 }
 
-# 4.3 Tabela Principal Enxuta:
-#   - Entradas (4 colunas): Fonte de Renda | Descrição | Valor | %
-#   - Saídas (6 colunas):   Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | %
-#   Todas as categorias mescladas trazem: Nome (n) + R$ Valor Total · %
-montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
+# 4.3 Tabela Principal Enxuta (com opção mostrar_resumo = TRUE apenas para o Boxplot)
+montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel, mostrar_resumo = FALSE) {
   n_lanc <- base::nrow(df_sub)
   
   if (n_lanc == 0 || base::sum(df_sub$valor, na.rm = TRUE) == 0) {
@@ -332,7 +325,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
   
   val_total    <- base::sum(df_sub$valor, na.rm = TRUE)
   vals         <- df_sub$valor
-  bloco_resumo <- montar_tabela_metricas(vals)
+  bloco_resumo <- if (mostrar_resumo) montar_tabela_metricas(vals) else ""
   
   if (tipo_sel == "Entradas") {
     # ENTRADAS (4 colunas): Fonte de Renda | Descrição | Valor | %
@@ -376,7 +369,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
       
       k_rows <- base::nrow(itens_f)
       
-      # Fonte de Renda com Nome (n) + R$ Valor Total · %
       bloco_fonte_html <- montar_bloco_categoria(f_atual, n = n_f, valor_total = tot_f, pct_total = pct_f, negrito_nome = TRUE)
       html_col_fonte   <- htmltools::htmlEscape(bloco_fonte_html, attribute = TRUE)
       
@@ -403,7 +395,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
             "<td rowspan='", k_rows, "' class='cel-primeira-col'>", bloco_fonte_html, "</td>",
             "<td>", itens_f$desc_lbl[j], "</td>",
             "<td>", formatar_celula_moeda(itens_f$val_item[j], FALSE), "</td>",
-            "<td>", itens_f$pct_item[j], "%</td>",
+            "<td class='col-pct-txt'>", itens_f$pct_item[j], "%</td>",
             "</tr>"
           ))
         } else {
@@ -411,7 +403,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
             "<tr", atributos_tr, ">",
             "<td>", itens_f$desc_lbl[j], "</td>",
             "<td>", formatar_celula_moeda(itens_f$val_item[j], FALSE), "</td>",
-            "<td>", itens_f$pct_item[j], "%</td>",
+            "<td class='col-pct-txt'>", itens_f$pct_item[j], "%</td>",
             "</tr>"
           ))
         }
@@ -420,10 +412,10 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
     
     linha_total <- base::paste0(
       "<tr class='linha-total-dt'>",
-      "<td class='cel-primeira-col'><b>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
+      "<td class='cel-primeira-col'><b class='txt-azul-escuro'>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
       "<td>—</td>",
       "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
-      "<td><b>100.0%</b></td>",
+      "<td><b class='txt-azul-escuro'>100.0%</b></td>",
       "</tr>"
     )
     
@@ -442,7 +434,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
     
   } else {
     # SAÍDAS (6 colunas): Forma de Pagamento | Tipo de Despesa | Item de Consumo | Descrição | Valor | %
-    # Nas 3 primeiras colunas mescladas entram: Nome (n) + R$ Valor · %
     formas_agr <- df_sub %>%
       dplyr::group_by(grupo_1) %>%
       dplyr::summarise(
@@ -465,7 +456,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
       
       df_forma <- df_sub %>% dplyr::filter(grupo_1 == f_atual)
       
-      # Quantidade, Soma e % de cada Tipo de Despesa
       resumo_por_tipo <- df_forma %>%
         dplyr::group_by(grupo_2) %>%
         dplyr::summarise(
@@ -477,7 +467,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
           pct_t = base::formatC((soma_t / val_total) * 100, format = "f", digits = 1, decimal.mark = ".")
         )
       
-      # Quantidade, Soma e % de cada Item de Consumo
       resumo_por_item <- df_forma %>%
         dplyr::group_by(grupo_2, item_consumo) %>%
         dplyr::summarise(
@@ -502,11 +491,8 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
         dplyr::rowwise() %>%
         dplyr::mutate(
           pct_desc = base::formatC((val_desc / val_total) * 100, format = "f", digits = 1, decimal.mark = "."),
-          # Tipo de Despesa: Nome (n) + R$ Valor Total · %
           tipo_lbl = montar_bloco_categoria(grupo_2, n = qtd_lanc_tipo, valor_total = soma_t, pct_total = pct_t, negrito_nome = TRUE),
-          # Item de Consumo: Nome (n) + R$ Valor Total · %
-          item_lbl = montar_bloco_categoria(item_consumo, n = qtd_lanc_item, valor_total = soma_i, pct_total = pct_i, negrito_nome = TRUE),
-          # Descrição: Nome (e (n) se repetir), pois o valor e % já estão nas duas colunas ao lado!
+          item_lbl = montar_bloco_categoria(item_consumo, n = qtd_lanc_item, valor_total = soma_i, pct_total = pct_i, negrito_nome = FALSE),
           desc_lbl = if (qtd_desc > 1) {
             base::paste0(descricao, " <span class='cat-badge-n'>(", qtd_desc, ")</span>")
           } else {
@@ -532,7 +518,6 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
       
       k_rows <- base::nrow(itens_f)
       
-      # Forma de Pagamento: Nome (n) + R$ Valor Total · %
       bloco_forma_html <- montar_bloco_categoria(f_atual, n = n_f, valor_total = tot_f_num, pct_total = pct_f_txt, negrito_nome = TRUE)
       html_col_forma   <- htmltools::htmlEscape(bloco_forma_html, attribute = TRUE)
       
@@ -580,7 +565,7 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
           cel_item,
           "<td>", itens_f$desc_lbl[j], "</td>",
           "<td>", formatar_celula_moeda(itens_f$val_desc[j], FALSE), "</td>",
-          "<td>", itens_f$pct_desc[j], "%</td>",
+          "<td class='col-pct-txt'>", itens_f$pct_desc[j], "%</td>",
           "</tr>"
         ))
       }
@@ -588,12 +573,12 @@ montar_card_tabela_unificada <- function(df_sub, titulo_periodo, tipo_sel) {
     
     linha_total <- base::paste0(
       "<tr class='linha-total-dt'>",
-      "<td class='cel-primeira-col'><b>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
+      "<td class='cel-primeira-col'><b class='txt-azul-escuro'>Total <span class='cat-badge-n'>(", n_lanc, ")</span></b></td>",
       "<td>—</td>",
       "<td>—</td>",
       "<td>—</td>",
       "<td>", formatar_celula_moeda(val_total, TRUE), "</td>",
-      "<td><b>100.0%</b></td>",
+      "<td><b class='txt-azul-escuro'>100.0%</b></td>",
       "</tr>"
     )
     
@@ -686,8 +671,9 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     
     box_res_e_y[i]     <- base::sum(sub_e$valor, na.rm = TRUE)
     box_res_s_y[i]     <- base::sum(sub_s$valor, na.rm = TRUE)
-    box_card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas")
-    box_card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas")
+    # Na visão Boxplot: mostrar_resumo = TRUE!
+    box_card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas", mostrar_resumo = TRUE)
+    box_card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas",   mostrar_resumo = TRUE)
     
     if (base::nrow(sub_e) > 0) {
       vals_e    <- sub_e$valor
@@ -748,7 +734,7 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
     }
   }
   
-  # Dados para Barras Empilhadas e Linhas
+  # Dados para Barras Empilhadas e Linhas (mostrar_resumo = FALSE!)
   if (mes_sel == "Todos os Meses") {
     n_pts        <- base::nrow(escopo_meses)
     eixo_x_vec   <- base::as.character(escopo_meses$eixo_x)
@@ -771,8 +757,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       y_s[i]         <- base::sum(sub_s$valor, na.rm = TRUE)
       hov_e[i]       <- montar_hover_inteligente(sub_e, m_lbl, "Entradas")
       hov_s[i]       <- montar_hover_inteligente(sub_s, m_lbl, "Saídas")
-      card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas")
-      card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas")
+      card_e_html[i] <- montar_card_tabela_unificada(sub_e, m_lbl, "Entradas", mostrar_resumo = FALSE)
+      card_s_html[i] <- montar_card_tabela_unificada(sub_s, m_lbl, "Saídas",   mostrar_resumo = FALSE)
     }
     
   } else {
@@ -792,8 +778,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
       y_s          <- base::c(0)
       hov_e        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Entradas"))
       hov_s        <- base::c(montar_hover_inteligente(d_mes[0, ], mes_sel, "Saídas"))
-      card_e_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas"))
-      card_s_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas"))
+      card_e_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Entradas", mostrar_resumo = FALSE))
+      card_s_html  <- base::c(montar_card_tabela_unificada(d_mes[0, ], mes_sel, "Saídas",   mostrar_resumo = FALSE))
     } else {
       n_pts        <- base::length(dias_ativos)
       eixo_x_vec   <- base::paste0("<b>", base::format(dias_ativos, "%d"), "</b>")
@@ -816,8 +802,8 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
         y_s[i]         <- base::sum(sub_s$valor, na.rm = TRUE)
         hov_e[i]       <- montar_hover_inteligente(sub_e, lbl_dia, "Entradas")
         hov_s[i]       <- montar_hover_inteligente(sub_s, lbl_dia, "Saídas")
-        card_e_html[i] <- montar_card_tabela_unificada(sub_e, lbl_dia, "Entradas")
-        card_s_html[i] <- montar_card_tabela_unificada(sub_s, lbl_dia, "Saídas")
+        card_e_html[i] <- montar_card_tabela_unificada(sub_e, lbl_dia, "Entradas", mostrar_resumo = FALSE)
+        card_s_html[i] <- montar_card_tabela_unificada(sub_s, lbl_dia, "Saídas",   mostrar_resumo = FALSE)
       }
     }
   }
@@ -838,9 +824,10 @@ gerar_par_traces <- function(mes_sel, usuario_sel) {
   sinal <- base::ifelse(dif > 0, "+", base::ifelse(dif < 0, "-", ""))
   cor_d <- base::ifelse(dif >= 0, "#15803d", "#b91c1c")
   
+  # Indicador renomeado para "Saldo"
   nome_e   <- base::paste0("<span class='kpi-min-rot'>Entradas:</span> <b class='kpi-min-val'>R$ ", formatar_brl(tot_e), "</b>")
   nome_s   <- base::paste0("<span class='kpi-min-rot'>Saídas:</span> <b class='kpi-min-val'>R$ ", formatar_brl(tot_s), "</b>")
-  nome_dif <- base::paste0("<span class='kpi-min-rot'>Diferença:</span> <b class='kpi-min-val' style='color:", cor_d, ";'>", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
+  nome_dif <- base::paste0("<span class='kpi-min-rot'>Saldo:</span> <b class='kpi-min-val' style='color:", cor_d, ";'>", sinal, "R$ ", formatar_brl(base::abs(dif)), "</b>")
   
   base::list(
     x            = base::as.character(eixo_x_vec),
@@ -910,7 +897,7 @@ json_estados <- jsonlite::toJSON(banco_estados, auto_unbox = FALSE)
 
 
 # ==============================================================================
-# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER (COM ORDENAÇÃO HIERÁRQUICA ENXUTA)
+# 7. CONSTRUÇÃO DO GRÁFICO PLOTLY + ONRENDER
 # ==============================================================================
 
 estado_ini <- banco_estados[["Todos os Meses"]][["Todos"]]
@@ -1034,7 +1021,7 @@ function(el, x) {
               (primG1 ? '<td rowspan=\"' + spanG1 + '\" class=\"cel-primeira-col\">' + r.hG1 + '</td>' : '') +
               '<td>' + r.hDesc + '</td>' +
               '<td>' + r.hVal + '</td>' +
-              '<td>' + r.hVpct + '</td>' +
+              '<td class=\"col-pct-txt\">' + r.hVpct + '</td>' +
               '</tr>';
           });
 
@@ -1118,7 +1105,7 @@ function(el, x) {
               (primIt ? '<td rowspan=\"' + contIt[k3] + '\">' + r.hItem + '</td>' : '') +
               '<td>' + r.hDesc + '</td>' +
               '<td>' + r.hVal + '</td>' +
-              '<td>' + r.hVpct + '</td>' +
+              '<td class=\"col-pct-txt\">' + r.hVpct + '</td>' +
               '</tr>';
           });
 
@@ -1196,7 +1183,7 @@ function(el, x) {
 
       if (legSaidas)    legSaidas.innerHTML    = '<span class=\"kpi-min-rot\">Saídas (' + rotX + '):</span> <b class=\"kpi-min-val\">R$ ' + formatarMoedaJS(valS) + '</b>';
       if (legEntradas)  legEntradas.innerHTML  = '<span class=\"kpi-min-rot\">Entradas (' + rotX + '):</span> <b class=\"kpi-min-val\">R$ ' + formatarMoedaJS(valE) + '</b>';
-      if (legDiferenca) legDiferenca.innerHTML = '<span class=\"kpi-min-rot\">Diferença (' + rotX + '):</span> <b class=\"kpi-min-val\" style=\"color:' + corD + ';\">' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
+      if (legDiferenca) legDiferenca.innerHTML = '<span class=\"kpi-min-rot\">Saldo (' + rotX + '):</span> <b class=\"kpi-min-val\" style=\"color:' + corD + ';\">' + sinal + 'R$ ' + formatarMoedaJS(Math.abs(dif)) + '</b>';
       if (quadDiferenca) quadDiferenca.style.background = corD;
     } else {
       const nomeE   = Array.isArray(d.e_nome)   ? d.e_nome[0]   : d.e_nome;
@@ -1393,7 +1380,7 @@ function(el, x) {
             txtLinhasS.push(rawS ? (' <br>' + rawS) : '');
           } else {
             posLinhasS.push('top center');
-            txtLinhasS.push(rawS ? (rawS + '<br> ') : '');
+            txtLinhasS.push(rawS ? (rawE + '<br> ') : '');
           }
         } else {
           posLinhasS.push('top center');
@@ -1509,7 +1496,7 @@ function(el, x) {
       height: alturaAtu,
       barmode: 'stack',
       barcornerradius: raioAtu,
-      bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.32),
+      bargap: isMobile ? (qtdPontos > 6 ? 0.20 : 0.35) : (qtdPontos > 10 ? 0.22 : 0.30),
       uniformtext: { mode: 'show', minsize: tamRotulo },
       shapes: shapesLayout,
       hovermode: 'closest',
@@ -1731,16 +1718,17 @@ grafico <- plotly::plot_ly(height = altura_grafico) %>%
 
 
 # ==============================================================================
-# 8. ESTILO CSS E ESTRUTURA HTML (CÉLULAS MESCLADAS COM VALOR + % E TABELA ENXUTA)
+# 8. ESTILO CSS E ESTRUTURA HTML (MAIS LARGO, À ESQUERDA E DETALHES AZUL MARINHO)
 # ==============================================================================
 
 estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css');
 
+  /* Painel expandido (1200px) e ancorado à esquerda para conviver com o Sumário (TOC) do Quarto */
   .painel-fluxo-alf {
-    max-width: 950px;
+    max-width: 1200px;
     width: 100%;
-    margin: 20px auto;
+    margin: 20px auto 20px 0;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: #ffffff;
     box-sizing: border-box;
@@ -2057,33 +2045,32 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
 
   /* =========================================================
-     TABELA DE RESUMO ESTATÍSTICO SUPER COMPACTA
+     TABELA DE RESUMO ESTATÍSTICO (EXCLUSIVA DO BOXPLOT)
      ========================================================= */
   .secao-resumo-estatistico {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
   table.tabela-metricas-compacta {
-    width: auto !important;
-    max-width: 100%;
+    width: 100% !important;
     margin: 0 !important;
-    font-size: 11px !important;
+    font-size: 11.5px !important;
   }
   table.tabela-metricas-compacta thead th {
-    font-size: 11px !important;
-    padding: 2px 10px 7px 10px !important;
+    font-size: 11.5px !important;
+    padding: 3px 10px 8px 10px !important;
   }
   table.tabela-metricas-compacta thead th i {
-    font-size: 11.5px !important;
-    margin-right: 3px !important;
+    font-size: 12px !important;
+    margin-right: 4px !important;
   }
   table.tabela-metricas-compacta tbody tr td {
-    padding: 4px 10px !important;
-    font-size: 11px !important;
+    padding: 6px 10px !important;
+    font-size: 11.5px !important;
     white-space: nowrap !important;
   }
 
   /* =========================================================
-     TABELA PRINCIPAL ENXUTA + BLOCOS EMPILHADOS (NOME / N / VALOR · %)
+     TABELA PRINCIPAL COM DETALHES EM AZUL ESCURO (#03045e)
      ========================================================= */
   .wrapper-tabela-dt-alf {
     width: 100%;
@@ -2112,15 +2099,16 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   table.tabela-estilo-dt-alf thead th.th-sort-alf {
     cursor: pointer !important;
   }
+  /* Ícones do cabeçalho em Azul Escuro (#03045e) para dar identidade visual elegante */
   table.tabela-estilo-dt-alf thead th i {
     margin-right: 5px !important;
     font-size: 13.5px !important;
-    color: #444444 !important;
+    color: ", titulo_cor, " !important;
   }
   table.tabela-estilo-dt-alf thead th.th-icone-pct i {
     margin-right: 0 !important;
     font-size: 14px !important;
-    color: #111111 !important;
+    color: ", titulo_cor, " !important;
   }
   table.tabela-estilo-dt-alf thead th::after {
     content: '' !important;
@@ -2162,9 +2150,10 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     border-bottom-right-radius: 12px !important;
   }
 
-  /* Bloco empilhado elegante dentro das células mescladas:
-     Linha 1: Nome (n)
-     Linha 2: R$ Valor Total · % */
+  /* Destaques sutis em Azul Escuro (#03045e) nas categorias mescladas e totais */
+  .txt-azul-escuro {
+    color: ", titulo_cor, " !important;
+  }
   .bloco-empilhado-alf {
     display: flex;
     flex-direction: column;
@@ -2182,12 +2171,12 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
   }
   .cat-nome-negrito {
     font-weight: 700;
-    color: #111111;
-    font-size: 12px;
+    color: ", titulo_cor, ";
+    font-size: 12.5px;
   }
   .cat-nome-normal {
     font-weight: 600;
-    color: #222222;
+    color: #1e293b;
     font-size: 12px;
   }
   .cat-badge-n {
@@ -2207,7 +2196,7 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     white-space: nowrap;
   }
   .cat-val-txt {
-    color: #0f172a;
+    color: ", titulo_cor, ";
     font-weight: 700;
     font-size: 11px;
   }
@@ -2233,6 +2222,14 @@ estilo_controles_fluxo <- htmltools::tags$style(base::paste0("
     max-width: 115px;
     margin: 0 auto;
     white-space: nowrap;
+  }
+  .celula-moeda-destaque {
+    font-weight: 700;
+    color: ", titulo_cor, ";
+  }
+  .col-pct-txt {
+    color: #334155 !important;
+    font-weight: 500;
   }
 
   /* No Celular: esconde o balão flutuante em Barras/Linhas, mas LIBERA no modo Boxplot */
@@ -2329,7 +2326,7 @@ opcoes_html_mes <- purrr::map(meses_disponiveis, function(m) {
 # 1. Título Principal ACIMA da linha preta
 titulo_topo_html <- htmltools::tags$div(class = "titulo-grafico-alf", titulo_nome)
 
-# 2. Caixa Única: Filtros na linha de cima + KPIs Minimalistas Elegantes na linha de baixo!
+# 2. Caixa Única: Filtros na linha de cima + KPIs Minimalistas Elegantes (Saídas | Entradas | Saldo) na linha de baixo!
 controles_e_legenda_html <- htmltools::tags$div(
   class = "barra-controles-alf",
   
@@ -2381,7 +2378,7 @@ controles_e_legenda_html <- htmltools::tags$div(
     )
   ),
   
-  # Linha Inferior: Cards KPI Minimalistas Elegantes (Saídas | Entradas | Diferença)
+  # Linha Inferior: Cards KPI Minimalistas Elegantes (Saídas | Entradas | Saldo)
   htmltools::tags$div(
     class = "linha-legendas-inf-alf",
     htmltools::tags$div(

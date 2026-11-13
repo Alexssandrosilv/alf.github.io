@@ -16,11 +16,21 @@ format:
   html:
     theme: flatly
     css: estilo/s8.css
-    toc: false
+    page-layout: full
+    toc: true
+    toc-location: right
+    toc-title: "Nesta página"
     number-sections: false
     code-fold: true
     code-summary: "Código"
     tbl-cap-location: top
+
+    # Grade para o PC: sem espaço morto na esquerda e Sumário fixo na direita
+    grid:
+      sidebar-width: 0px
+      body-width: 1400px
+      margin-width: 220px
+      gutter-width: 1.5rem
 
     include-in-header:
       - text: |
@@ -28,12 +38,41 @@ format:
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Fira+Code&display=swap" rel="stylesheet">
 
-          <!-- Estilo do "Código" recolhível -->
           <style>
           details > summary {
             color: #132a13;
             font-weight: bold;
             cursor: pointer;
+          }
+
+          /* 1. DESKTOP (>= 992px): Mostra o TOC na direita e expande o painel/tabelas */
+          @media (min-width: 992px) {
+            #quarto-content.page-columns {
+              grid-template-columns: [screen-start] 1.5rem [screen-start-inset page-start page-start-inset body-start-outset body-start] minmax(0, 1fr) [body-end body-end-outset] 1.5rem [margin-start] 220px [margin-end page-end-inset page-end screen-end-inset] 1.5rem [screen-end] !important;
+            }
+            .painel-fluxo-alf,
+            .dataTables_wrapper {
+              max-width: 100% !important;
+              width: 100% !important;
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+            }
+          }
+
+          /* 2. MOBILE E TABLET (< 992px): Desativa 100% o TOC para não bugar a tela! */
+          @media (max-width: 991.98px) {
+            #quarto-margin-sidebar,
+            #TOC,
+            nav[role="doc-toc"],
+            .quarto-secondary-nav,
+            .quarto-btn-toggle {
+              display: none !important;
+              width: 0 !important;
+              height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+            }
           }
           </style>
 
@@ -73,13 +112,8 @@ format:
           </script>
 
 execute:
-  # ALF lê a planilha ao vivo: freeze desligado para o site sempre refletir os dados atuais.
-  # (No portfólio, "freeze: auto" faz sentido porque os dados são fixos.)
   freeze: false
   message: false
   warning: false
 
 lang: pt
-
-# Usa a largura toda da tela (é o que deixa o conteúdo flexível no celular e no notebook)
-page-layout: full
