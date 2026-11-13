@@ -20,7 +20,7 @@ format:
     toc: true
     toc-location: right
     toc-title: "Nesta página"
-    number-sections: false
+    number-sections: true
     code-fold: true
     code-summary: "Código"
     tbl-cap-location: top
@@ -43,6 +43,18 @@ format:
             color: #132a13;
             font-weight: bold;
             cursor: pointer;
+          }
+
+          /* Mantém o texto do Sumário (TOC) exatamente como escrito (sem converter para MAIÚSCULAS) */
+          #TOC,
+          #TOC a,
+          #TOC .nav-link,
+          #TOC span,
+          nav[role="doc-toc"] a,
+          nav[role="doc-toc"] .nav-link,
+          .sidebar nav[role="doc-toc"] ul > li > a {
+            text-transform: none !important;
+            letter-spacing: normal !important;
           }
 
           /* 1. DESKTOP (>= 992px): Garante que o gráfico respeite o limite antes do Sumário e nunca tenha cliques bloqueados */
