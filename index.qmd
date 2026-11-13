@@ -162,6 +162,7 @@ pagetitle: "Relatório ALF"
 
 :::
 
+## Fluxo Financeiro
 
 ```{r}
 #| label: pipeline-alf

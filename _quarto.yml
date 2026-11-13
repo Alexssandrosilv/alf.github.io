@@ -20,7 +20,7 @@ format:
     toc: true
     toc-location: right
     toc-title: "Nesta página"
-    number-sections: false
+    number-sections: true
     code-fold: true
     code-summary: "Código"
     tbl-cap-location: top
